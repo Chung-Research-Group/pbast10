@@ -46,6 +46,9 @@
       setValue('#submission-id', submission.submissionId);
       setValue('#revision-id', makeId());
       setValue('#edit-token', token);
+      setValue('#netlify-name', (submission.lastName && submission.firstName)
+        ? submission.lastName + ', ' + submission.firstName
+        : submission.lastName || submission.firstName);
       setValue('#last-name', submission.lastName);
       setValue('#first-name', submission.firstName);
       setValue('#email', submission.email);
@@ -76,6 +79,9 @@
     });
 
   form.addEventListener('submit', function (event) {
+    var lastName = document.querySelector('#last-name').value.trim();
+    var firstName = document.querySelector('#first-name').value.trim();
+    setValue('#netlify-name', lastName && firstName ? lastName + ', ' + firstName : lastName || firstName);
     var file = fileInput.files[0];
     if (file && file.size > 7.5 * 1024 * 1024) {
       event.preventDefault();

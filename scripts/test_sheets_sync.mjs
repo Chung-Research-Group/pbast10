@@ -29,7 +29,12 @@ const sampleData = {
   "primary-topic": "Molecular simulation and machine learning",
   "abstract-title": "A reproducible adsorption study",
   "co-authors": "Babbage, Charles — Example University",
-  "abstract-file": "https://example.test/abstract.pdf",
+  "abstract-file": [{
+    filename: "abstract.pdf",
+    type: "file",
+    size: 1024,
+    url: "https://example.test/abstract.pdf",
+  }],
   consent: "yes",
 };
 
@@ -49,7 +54,7 @@ const revisionData = {
   "form-name": "abstract-revision",
   "revision-id": "revision-event-1",
   "edit-token": "a".repeat(64),
-  "abstract-file": "https://example.test/revised.pdf",
+  "abstract-file": JSON.stringify([{ url: "https://example.test/revised.pdf" }]),
 };
 await netlifyHandler.formSubmitted({ data: revisionData });
 assert.equal(forwarded.body.action, "revise");
@@ -216,7 +221,7 @@ const revisedData = {
   ...sampleData,
   email: "ada.new@example.org",
   "abstract-title": "A revised adsorption study",
-  "abstract-file": "https://example.test/revised.pdf",
+  "abstract-file": JSON.stringify([{ url: "https://example.test/revised.pdf" }]),
   "edit-token": token,
 };
 const revisionResult = callAppsScript({
