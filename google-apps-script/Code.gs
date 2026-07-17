@@ -221,7 +221,7 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
   sheet.getRange(rowNumber, COL.CONFIRMATION_STATUS).setValue('Revision confirmation pending');
 
   var current = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
-  appendHistory_(spreadsheet, current, clean_(current[0]), revisionNumber, revisedAt, 'Revision');
+  appendHistory_(spreadsheet, current, eventId, revisionNumber, revisedAt, 'Revision');
 
   try {
     sendConfirmationEmail_(current, nextToken, properties, true);

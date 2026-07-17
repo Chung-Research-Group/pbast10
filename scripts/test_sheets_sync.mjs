@@ -227,6 +227,7 @@ const history = sheets.get("Revision History");
 assert.equal(history.rows.length, 3, "history must contain a header, original, and revision");
 assert.equal(history.rows[1][2], 0);
 assert.equal(history.rows[2][2], 1);
+assert.equal(history.rows[2][1], "revision-event-1", "history must retain the Netlify revision event ID");
 
 const duplicate = callAppsScript({
   action: "revise",
