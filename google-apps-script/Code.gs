@@ -112,7 +112,7 @@ function createSubmission_(spreadsheet, sheet, payload, properties) {
     clean_(data['primary-topic']),
     clean_(data['abstract-title']),
     clean_(data['co-authors']),
-    clean_(data['abstract-file']),
+    fileUrl_(data['abstract-file']),
     clean_(data.consent),
     'New',
     '', '', '', '',
@@ -210,7 +210,7 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
     clean_(data['primary-topic']),
     clean_(data['abstract-title']),
     clean_(data['co-authors']),
-    clean_(data['abstract-file']),
+    fileUrl_(data['abstract-file']),
     clean_(data.consent)
   ];
   sheet.getRange(rowNumber, COL.LAST_NAME, 1, updates.length).setValues([updates]);
@@ -385,6 +385,29 @@ function validateSubmissionData_(data) {
   }
   var email = clean_(data.email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email address is invalid.');
+}
+
+function fileUrl_(value) {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) return value.length ? fileUrl_(value[0]) : '';
+  if (typeof value === 'object') return clean_(value.url || value.secure_url || '');
+  if (typeof value === 'string') {
+    var trimmed = value.trim();
+    if (trimmed.charAt(0) === '[' || trimmed.charAt(0) === '{') {
+      try { return fileUrl_(JSON.parse(trimmed)); } catch (error) { /* keep the original string */ }
+    }
+    return trimmed;
+  }
+  return clean_(value);
+}
+
+// Run this once from the Apps Script editor to grant spreadsheet and email access.
+function authorizePBAST10() {
+  var properties = PropertiesService.getScriptProperties();
+  var spreadsheetId = properties.getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) throw new Error('SPREADSHEET_ID is missing.');
+  SpreadsheetApp.openById(spreadsheetId).getName();
+  Logger.log('Remaining email quota: ' + MailApp.getRemainingDailyQuota());
 }
 
 function findRowByValue_(sheet, column, value) {

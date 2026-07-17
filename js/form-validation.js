@@ -3,6 +3,7 @@
   var form = document.querySelector('form[name="abstract-submission"]');
   var fileInput = document.querySelector('#abstract-file');
   var submissionId = document.querySelector('#submission-id');
+  var netlifyName = document.querySelector('#netlify-name');
   if (!form || !fileInput) return;
 
   if (submissionId && !submissionId.value) {
@@ -12,6 +13,11 @@
   }
 
   form.addEventListener('submit', function (event) {
+    if (netlifyName) {
+      var lastName = document.querySelector('#last-name').value.trim();
+      var firstName = document.querySelector('#first-name').value.trim();
+      netlifyName.value = lastName && firstName ? lastName + ', ' + firstName : lastName || firstName;
+    }
     var file = fileInput.files[0];
     if (file && file.size > 7.5 * 1024 * 1024) {
       event.preventDefault();
