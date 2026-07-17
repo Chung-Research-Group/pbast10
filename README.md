@@ -41,7 +41,7 @@ Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
 - **Colors & fonts** — design tokens at the top of `css/style.css` (`:root`).
 - **Sponsor logos** — add confirmed logos only after permission is recorded, then update the sponsor section in `index.html`.
 - **Speaker photos** — drop images in `assets/speakers/` and update `speakers.html`.
-- **Abstract form** — fields and accepted file types are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB.
+- **Abstract form** — fields and the PDF-only upload restriction are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB. The Netlify event handler and Apps Script receiver also validate the uploaded file metadata.
 - **Contact email** — in the footer of every page and on `sponsorship.html`.
 - **Pre-commit check** — run `python scripts/check_site.py`.
 

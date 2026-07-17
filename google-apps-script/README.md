@@ -13,7 +13,7 @@ Target spreadsheet ID:
    - `SPREADSHEET_ID`: `1L5musQqOwy2aOO6AAQPmoI3tz7RMTGkro9wAPPqJdvg`
    - `SYNC_SECRET`: a new long random value used only for this integration
    - Optional `SITE_URL`: `https://pbast10.org`
-   - Optional `REPLY_TO_EMAIL`: `drygchung@pusan.ac.kr`
+   - Optional `REPLY_TO_EMAIL`: `pbast10.org@gmail.com`
    - Optional `REVISION_DEADLINE`: `2026-11-30T23:59:59+09:00`
 5. Select **Deploy -> New deployment -> Web app**.
 6. Set **Execute as** to yourself and **Who has access** to anyone.

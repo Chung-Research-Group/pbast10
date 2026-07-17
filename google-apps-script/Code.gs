@@ -10,7 +10,7 @@
 var TRACKER_SHEET = 'Abstract Tracker';
 var HISTORY_SHEET = 'Revision History';
 var SITE_URL_DEFAULT = 'https://pbast10.org';
-var REPLY_TO_DEFAULT = 'drygchung@pusan.ac.kr';
+var REPLY_TO_DEFAULT = 'pbast10.org@gmail.com';
 var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
 
 var COL = {
@@ -42,8 +42,6 @@ function doPost(e) {
   var lock = LockService.getScriptLock();
 
   try {
-    lock.waitLock(30000);
-
     var properties = PropertiesService.getScriptProperties();
     var expectedSecret = properties.getProperty('SYNC_SECRET');
     var spreadsheetId = properties.getProperty('SPREADSHEET_ID');
@@ -56,6 +54,9 @@ function doPost(e) {
     if (!payload.secret || !secureEquals_(String(payload.secret), String(expectedSecret))) {
       return jsonResponse_({ ok: false, error: 'Unauthorized.' });
     }
+
+    // Do not let unauthenticated callers occupy the shared write lock.
+    lock.waitLock(30000);
 
     var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     var sheet = spreadsheet.getSheetByName(TRACKER_SHEET);
@@ -102,18 +103,18 @@ function createSubmission_(spreadsheet, sheet, payload, properties) {
   var row = [
     submissionId,
     submittedAt,
-    lastName,
-    firstName,
-    formatName_(lastName, firstName),
-    clean_(data.email),
-    clean_(data.affiliation),
-    clean_(data.country),
-    clean_(data['presentation-preference']),
-    clean_(data['primary-topic']),
-    clean_(data['abstract-title']),
-    clean_(data['co-authors']),
+    sheetText_(lastName),
+    sheetText_(firstName),
+    sheetText_(formatName_(lastName, firstName)),
+    sheetText_(data.email),
+    sheetText_(data.affiliation),
+    sheetText_(data.country),
+    sheetText_(data['presentation-preference']),
+    sheetText_(data['primary-topic']),
+    sheetText_(data['abstract-title']),
+    sheetText_(data['co-authors']),
     fileUrl_(data['abstract-file']),
-    clean_(data.consent),
+    sheetText_(data.consent),
     'New',
     '', '', '', '',
     'Pending',
@@ -200,18 +201,18 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
   var lastName = clean_(data['last-name']);
 
   var updates = [
-    lastName,
-    firstName,
-    formatName_(lastName, firstName),
-    clean_(data.email),
-    clean_(data.affiliation),
-    clean_(data.country),
-    clean_(data['presentation-preference']),
-    clean_(data['primary-topic']),
-    clean_(data['abstract-title']),
-    clean_(data['co-authors']),
+    sheetText_(lastName),
+    sheetText_(firstName),
+    sheetText_(formatName_(lastName, firstName)),
+    sheetText_(data.email),
+    sheetText_(data.affiliation),
+    sheetText_(data.country),
+    sheetText_(data['presentation-preference']),
+    sheetText_(data['primary-topic']),
+    sheetText_(data['abstract-title']),
+    sheetText_(data['co-authors']),
     fileUrl_(data['abstract-file']),
-    clean_(data.consent)
+    sheetText_(data.consent)
   ];
   sheet.getRange(rowNumber, COL.LAST_NAME, 1, updates.length).setValues([updates]);
   sheet.getRange(rowNumber, COL.TOKEN_HASH).setValue(hashToken_(nextToken));
@@ -259,7 +260,8 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
   var name = clean_(row[COL.FULL_NAME - 1]);
   var title = clean_(row[COL.TITLE - 1]);
   var siteUrl = (properties.getProperty('SITE_URL') || SITE_URL_DEFAULT).replace(/\/$/, '');
-  var editUrl = siteUrl + '/revise-abstract.html?token=' + encodeURIComponent(token);
+  // A URL fragment is not included in HTTP requests or server access logs.
+  var editUrl = siteUrl + '/revise-abstract.html#token=' + encodeURIComponent(token);
   var deadline = Utilities.formatDate(revisionDeadline_(properties), 'Asia/Seoul', 'MMMM d, yyyy, h:mm a z');
   var subject = isRevision
     ? '[PBAST10] Abstract revision confirmed — ' + submissionId
@@ -334,18 +336,18 @@ function appendHistory_(spreadsheet, trackerRow, eventId, revisionNumber, record
     revisionNumber,
     recordedAt,
     eventType,
-    clean_(trackerRow[COL.LAST_NAME - 1]),
-    clean_(trackerRow[COL.FIRST_NAME - 1]),
-    clean_(trackerRow[COL.FULL_NAME - 1]),
-    clean_(trackerRow[COL.EMAIL - 1]),
-    clean_(trackerRow[COL.AFFILIATION - 1]),
-    clean_(trackerRow[COL.COUNTRY - 1]),
-    clean_(trackerRow[COL.PRESENTATION - 1]),
-    clean_(trackerRow[COL.TOPIC - 1]),
-    clean_(trackerRow[COL.TITLE - 1]),
-    clean_(trackerRow[COL.COAUTHORS - 1]),
+    sheetText_(trackerRow[COL.LAST_NAME - 1]),
+    sheetText_(trackerRow[COL.FIRST_NAME - 1]),
+    sheetText_(trackerRow[COL.FULL_NAME - 1]),
+    sheetText_(trackerRow[COL.EMAIL - 1]),
+    sheetText_(trackerRow[COL.AFFILIATION - 1]),
+    sheetText_(trackerRow[COL.COUNTRY - 1]),
+    sheetText_(trackerRow[COL.PRESENTATION - 1]),
+    sheetText_(trackerRow[COL.TOPIC - 1]),
+    sheetText_(trackerRow[COL.TITLE - 1]),
+    sheetText_(trackerRow[COL.COAUTHORS - 1]),
     clean_(trackerRow[COL.FILE_URL - 1]),
-    clean_(trackerRow[COL.CONSENT - 1])
+    sheetText_(trackerRow[COL.CONSENT - 1])
   ]);
 }
 
@@ -385,20 +387,36 @@ function validateSubmissionData_(data) {
   }
   var email = clean_(data.email);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email address is invalid.');
+  validatePdfFile_(data['abstract-file']);
 }
 
 function fileUrl_(value) {
-  if (value === null || value === undefined) return '';
-  if (Array.isArray(value)) return value.length ? fileUrl_(value[0]) : '';
-  if (typeof value === 'object') return clean_(value.url || value.secure_url || '');
-  if (typeof value === 'string') {
-    var trimmed = value.trim();
-    if (trimmed.charAt(0) === '[' || trimmed.charAt(0) === '{') {
-      try { return fileUrl_(JSON.parse(trimmed)); } catch (error) { /* keep the original string */ }
-    }
-    return trimmed;
+  return fileInfo_(value).url;
+}
+
+function validatePdfFile_(value) {
+  var file = fileInfo_(value);
+  if (!/\.pdf$/i.test(file.filename)) throw new Error('Only PDF abstract files are accepted.');
+  if (!isFinite(file.size) || file.size < 1 || file.size > 7.5 * 1024 * 1024) {
+    throw new Error('The PDF abstract file must be no larger than 7.5 MB.');
   }
-  return clean_(value);
+  if (file.mime && file.mime !== 'application/pdf') throw new Error('The uploaded file is not a PDF.');
+  if (!/^https:\/\/[^\s/]+\/.+/i.test(file.url)) throw new Error('Abstract upload URL is invalid.');
+}
+
+function fileInfo_(value) {
+  var parsed = value;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch (error) { throw new Error('Abstract upload metadata is invalid.'); }
+  }
+  if (Array.isArray(parsed)) parsed = parsed.length ? parsed[0] : null;
+  if (!parsed || typeof parsed !== 'object') throw new Error('A PDF abstract file is required.');
+  return {
+    filename: clean_(parsed.filename || parsed.name),
+    size: Number(parsed.size),
+    mime: clean_(parsed.content_type || parsed.contentType || parsed.mime_type || parsed.mimeType).toLowerCase(),
+    url: clean_(parsed.url || parsed.secure_url)
+  };
 }
 
 // Run this once from the Apps Script editor to grant spreadsheet and email access.
@@ -457,6 +475,13 @@ function clean_(value) {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value.trim();
   return JSON.stringify(value);
+}
+
+// Prevent user-controlled values from being interpreted as Google Sheets
+// formulas. The apostrophe is Sheets' explicit plain-text marker.
+function sheetText_(value) {
+  var text = clean_(value);
+  return /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? "'" + text : text;
 }
 
 function formatName_(lastName, firstName) {
