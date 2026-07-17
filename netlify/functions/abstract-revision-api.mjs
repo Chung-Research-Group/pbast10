@@ -55,3 +55,14 @@ function json(body, status) {
     },
   });
 }
+
+// Limit token lookups per visitor so abusive traffic cannot exhaust the
+// downstream Apps Script execution quota.
+export const config = {
+  path: "/.netlify/functions/abstract-revision-api",
+  rateLimit: {
+    windowLimit: 10,
+    windowSize: 60,
+    aggregateBy: ["ip", "domain"],
+  },
+};

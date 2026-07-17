@@ -11,7 +11,11 @@ const env = new Map([
 globalThis.Netlify = { env: { get: (key) => env.get(key) } };
 
 let forwarded = null;
+let pdfPrefix = "%PDF-1.7\n";
 globalThis.fetch = async (url, options) => {
+  if (options?.headers?.range) {
+    return new Response(pdfPrefix, { status: 206 });
+  }
   forwarded = { url, options, body: JSON.parse(options.body) };
   return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true }) };
 };
@@ -28,7 +32,7 @@ const sampleData = {
   "presentation-preference": "Oral",
   "primary-topic": "Molecular simulation and machine learning",
   "abstract-title": "A reproducible adsorption study",
-  "co-authors": "Babbage, Charles — Example University",
+  "co-authors": "=HYPERLINK(\"https://example.invalid\",\"Babbage, Charles\")",
   "abstract-file": [{
     filename: "abstract.pdf",
     type: "file",
@@ -54,7 +58,11 @@ const revisionData = {
   "form-name": "abstract-revision",
   "revision-id": "revision-event-1",
   "edit-token": "a".repeat(64),
-  "abstract-file": JSON.stringify([{ url: "https://example.test/revised.pdf" }]),
+  "abstract-file": JSON.stringify([{
+    filename: "revised.pdf",
+    size: 2048,
+    url: "https://example.test/revised.pdf",
+  }]),
 };
 await netlifyHandler.formSubmitted({ data: revisionData });
 assert.equal(forwarded.body.action, "revise");
@@ -70,7 +78,25 @@ forwarded = null;
 await netlifyHandler.formSubmitted({ data: { "form-name": "another-form" } });
 assert.equal(forwarded, null, "unrelated forms must not be forwarded");
 
-const revisionApi = (await import("../netlify/functions/abstract-revision-api.mjs")).default;
+await assert.rejects(
+  netlifyHandler.formSubmitted({
+    data: { ...sampleData, "abstract-file": [{ filename: "malware.docm", size: 1024, url: "https://example.test/malware.docm" }] },
+  }),
+  /Only PDF/,
+  "non-PDF uploads must be rejected before forwarding",
+);
+pdfPrefix = "not a PDF";
+await assert.rejects(
+  netlifyHandler.formSubmitted({ data: sampleData }),
+  /valid PDF header/,
+  "files with a PDF extension but no PDF signature must be rejected",
+);
+pdfPrefix = "%PDF-1.7\n";
+
+const revisionApiModule = await import("../netlify/functions/abstract-revision-api.mjs");
+const revisionApi = revisionApiModule.default;
+assert.equal(revisionApiModule.config.rateLimit.windowLimit, 10);
+assert.deepEqual(revisionApiModule.config.rateLimit.aggregateBy, ["ip", "domain"]);
 const invalidApiResponse = await revisionApi(new Request("https://example.test/.netlify/functions/abstract-revision-api", {
   method: "POST",
   headers: { "content-type": "application/json" },
@@ -204,12 +230,13 @@ assert.equal(createResult.ok, true);
 assert.equal(tracker.rows.length, 2);
 assert.equal(tracker.rows[1].length, 29);
 assert.equal(tracker.rows[1][4], "Lovelace, Ada");
+assert.equal(tracker.rows[1][11].startsWith("'="), true, "formula-like text must be escaped before writing to Sheets");
 assert.equal(tracker.rows[1][21], "Not sent", "decision notification status must remain untouched");
 assert.equal(tracker.rows[1][24], 0);
 assert.equal(tracker.rows[1][27], "Confirmation sent");
 assert.equal(sentEmails.length, 1);
 
-const token = sentEmails[0].body.match(/token=([a-f0-9]{64})/i)?.[1];
+const token = sentEmails[0].body.match(/#token=([a-f0-9]{64})/i)?.[1];
 assert.ok(token, "confirmation email must contain a 64-character token");
 const lookup = callAppsScript({ action: "get", token });
 assert.equal(lookup.ok, true);
@@ -221,7 +248,11 @@ const revisedData = {
   ...sampleData,
   email: "ada.new@example.org",
   "abstract-title": "A revised adsorption study",
-  "abstract-file": JSON.stringify([{ url: "https://example.test/revised.pdf" }]),
+  "abstract-file": JSON.stringify([{
+    filename: "revised.pdf",
+    size: 2048,
+    url: "https://example.test/revised.pdf",
+  }]),
   "edit-token": token,
 };
 const revisionResult = callAppsScript({
@@ -245,6 +276,7 @@ assert.equal(history.rows.length, 3, "history must contain a header, original, a
 assert.equal(history.rows[1][2], 0);
 assert.equal(history.rows[2][2], 1);
 assert.equal(history.rows[2][1], "revision-event-1", "history must retain the Netlify revision event ID");
+assert.equal(history.rows[1][14].startsWith("'="), true, "history rows must also escape formula-like text");
 
 const duplicate = callAppsScript({
   action: "revise",

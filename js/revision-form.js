@@ -5,7 +5,17 @@
   var content = document.querySelector('#revision-content');
   var form = document.querySelector('form[name="abstract-revision"]');
   var fileInput = document.querySelector('#abstract-file');
-  var token = new URLSearchParams(window.location.search).get('token') || '';
+  var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  var queryParams = new URLSearchParams(window.location.search);
+  // Fragment tokens are not sent to Netlify, Cloudflare, or other HTTP servers.
+  // Keep query support temporarily so previously issued confirmation links still work.
+  var token = hashParams.get('token') || queryParams.get('token') || '';
+
+  if (token) {
+    queryParams.delete('token');
+    var cleanUrl = window.location.pathname + (queryParams.toString() ? '?' + queryParams.toString() : '');
+    window.history.replaceState(null, document.title, cleanUrl);
+  }
 
   function showError(message) {
     loading.hidden = true;
@@ -23,6 +33,17 @@
     return window.crypto && typeof window.crypto.randomUUID === 'function'
       ? window.crypto.randomUUID()
       : 'revision-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  }
+
+  function validatePdf(file) {
+    if (!file) return '';
+    if (!/\.pdf$/i.test(file.name || '') || (file.type && file.type !== 'application/pdf')) {
+      return 'Please upload a PDF file.';
+    }
+    if (file.size > 7.5 * 1024 * 1024) {
+      return 'Please upload a file no larger than 7.5 MB.';
+    }
+    return '';
   }
 
   if (!/^[a-f0-9]{64}$/i.test(token)) {
@@ -82,10 +103,10 @@
     var lastName = document.querySelector('#last-name').value.trim();
     var firstName = document.querySelector('#first-name').value.trim();
     setValue('#netlify-name', lastName && firstName ? lastName + ', ' + firstName : lastName || firstName);
-    var file = fileInput.files[0];
-    if (file && file.size > 7.5 * 1024 * 1024) {
+    var validationMessage = validatePdf(fileInput.files[0]);
+    if (validationMessage) {
       event.preventDefault();
-      fileInput.setCustomValidity('Please upload a file no larger than 7.5 MB.');
+      fileInput.setCustomValidity(validationMessage);
       fileInput.reportValidity();
       return;
     }
@@ -93,6 +114,6 @@
   });
 
   fileInput.addEventListener('change', function () {
-    fileInput.setCustomValidity('');
+    fileInput.setCustomValidity(validatePdf(fileInput.files[0]));
   });
 })();

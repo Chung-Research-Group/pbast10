@@ -12,21 +12,32 @@
       : 'pbast10-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   }
 
+  function validatePdf(file) {
+    if (!file) return '';
+    if (!/\.pdf$/i.test(file.name || '') || (file.type && file.type !== 'application/pdf')) {
+      return 'Please upload a PDF file.';
+    }
+    if (file.size > 7.5 * 1024 * 1024) {
+      return 'Please upload a file no larger than 7.5 MB.';
+    }
+    return '';
+  }
+
   form.addEventListener('submit', function (event) {
     if (netlifyName) {
       var lastName = document.querySelector('#last-name').value.trim();
       var firstName = document.querySelector('#first-name').value.trim();
       netlifyName.value = lastName && firstName ? lastName + ', ' + firstName : lastName || firstName;
     }
-    var file = fileInput.files[0];
-    if (file && file.size > 7.5 * 1024 * 1024) {
+    var validationMessage = validatePdf(fileInput.files[0]);
+    if (validationMessage) {
       event.preventDefault();
-      fileInput.setCustomValidity('Please upload a file no larger than 7.5 MB.');
+      fileInput.setCustomValidity(validationMessage);
       fileInput.reportValidity();
     }
   });
 
   fileInput.addEventListener('change', function () {
-    fileInput.setCustomValidity('');
+    fileInput.setCustomValidity(validatePdf(fileInput.files[0]));
   });
 })();
