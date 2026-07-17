@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 250">
+  <rect width="640" height="250" fill="#ffffff"></rect>
+  <g transform="translate(36,12)">
+    <g transform="translate(56,0)">
+      <line x1="0" y1="28" x2="0" y2="86" stroke="#003876" stroke-width="8"></line>
+      <line x1="0" y1="28" x2="0" y2="4" stroke="#e8821e" stroke-width="6"></line>
+      <rect x="-19" y="38" width="38" height="14" rx="7" fill="#ffffff" stroke="#003876" stroke-width="5"></rect>
+      <rect x="-14" y="57" width="28" height="10" rx="5" fill="#ffffff" stroke="#003876" stroke-width="5"></rect>
+    </g>
+    <g fill="none" stroke="#003876" stroke-width="7" stroke-linejoin="round">
+      <path d="M56,86 L80,100 L80,128 L56,142 L32,128 L32,100 Z"></path>
+      <path d="M32,128 L56,142 L56,170 L32,184 L8,170 L8,142 Z"></path>
+      <path d="M80,128 L104,142 L104,170 L80,184 L56,170 L56,142 Z"></path>
+    </g>
+    <circle cx="56" cy="114" r="11" fill="#2e8b3d"></circle>
+    <circle cx="32" cy="156" r="10" fill="#5ea9f0"></circle>
+    <circle cx="80" cy="156" r="10" fill="#e8821e"></circle>
+    <path d="M-10,206 C12,196 34,214 56,204 C78,194 100,212 122,202" fill="none" stroke="#5ea9f0" stroke-width="8" stroke-linecap="round"></path>
+  </g>
+  <g transform="translate(196,70)">
+    <text x="0" y="56" font-family="Georgia, &#39;Times New Roman&#39;, serif" font-weight="700" font-size="64" fill="#003876" letter-spacing="1">PBAST<tspan fill="#2e8b3d">10</tspan></text>
+    <line x1="4" y1="76" x2="404" y2="76" stroke="#e8821e" stroke-width="3.5"></line>
+    <text x="4" y="104" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="19" fill="#4b453b">Pacific Basin Conference on</text>
+    <text x="4" y="130" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="19" fill="#4b453b">Adsorption Science and Technology</text>
+  </g>
+</svg>
