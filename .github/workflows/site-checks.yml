@@ -1,0 +1,19 @@
+name: Site checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate static site
+        run: python scripts/check_site.py
+      - name: Test Google Sheets sync
+        run: node scripts/test_sheets_sync.mjs
