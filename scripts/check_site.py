@@ -17,6 +17,7 @@ class PageParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.title = ""
+        self.title_count = 0
         self.in_title = False
         self.h1_count = 0
         self.description = ""
@@ -27,6 +28,7 @@ class PageParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         data = dict(attrs)
         if tag == "title":
+            self.title_count += 1
             self.in_title = True
         elif tag == "h1":
             self.h1_count += 1
@@ -56,6 +58,8 @@ for path in HTML_FILES:
 
     if parser.h1_count != 1:
         errors.append(f"{rel}: expected one h1, found {parser.h1_count}")
+    if parser.title_count != 1:
+        errors.append(f"{rel}: expected one title, found {parser.title_count}")
     if not parser.title.strip():
         errors.append(f"{rel}: missing title")
     elif parser.title in titles:

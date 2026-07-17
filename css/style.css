@@ -64,8 +64,8 @@ img{max-width:100%}
 .btn-underline{color:var(--navy);padding:15px 22px;border-bottom:2px solid var(--navy);background:rgba(247,244,236,.6)}
 .btn-outline{border:1px solid var(--navy);color:var(--navy);font-size:15px;padding:12px 24px}
 .btn-outline.red{border-color:var(--red);color:var(--red)}
-.btn-white{background:#fff;color:var(--navy);font-size:15px;padding:11px 22px}
-.btn-white:hover{color:var(--red)}
+.btn-white,.panel-navy .btn-white{background:#fff;color:var(--navy);font-size:15px;padding:11px 22px}
+.btn-white:hover,.panel-navy .btn-white:hover{color:var(--red)}
 
 /* layout */
 .page{max-width:1200px;margin:0 auto;padding:64px 56px}
@@ -130,6 +130,8 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .speaker-card .info{padding:22px 26px;border-top:3px solid var(--navy)}
 .speaker-card .name{font:700 20px var(--serif);color:var(--ink)}
 .speaker-card .aff{font:400 15.5px/1.55 var(--sans);color:var(--muted);margin-top:6px}
+.aff .dept,.person-aff .dept{display:block;color:var(--ink);font-weight:500}
+.person-aff{display:block;text-align:right;color:var(--muted);line-height:1.45}
 
 .keynote-card{background:#fff;border:1px solid var(--line);padding:22px 26px;display:flex;justify-content:space-between;align-items:baseline;gap:16px}
 .keynote-card .name{font:700 17px var(--serif);color:var(--ink)}
