@@ -2,9 +2,10 @@
 export default {
   async formSubmitted(event) {
     const data = event.data || {};
+    const formName = data["form-name"] || "";
 
-    // Ignore any future Netlify forms that are not the abstract form.
-    if (data["form-name"] && data["form-name"] !== "abstract-submission") return;
+    // Ignore unrelated Netlify forms.
+    if (!["abstract-submission", "abstract-revision"].includes(formName)) return;
 
     const webhookUrl = Netlify.env.get("GOOGLE_SHEETS_WEBHOOK_URL");
     const syncSecret = Netlify.env.get("SHEETS_SYNC_SECRET");
@@ -19,7 +20,9 @@ export default {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         secret: syncSecret,
+        action: formName === "abstract-revision" ? "revise" : "create",
         submissionId: data["submission-id"] || "",
+        eventId: data["revision-id"] || data["submission-id"] || "",
         submittedAt: new Date().toISOString(),
         data,
       }),

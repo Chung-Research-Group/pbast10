@@ -13,6 +13,7 @@ index.html               Home (hero, welcome, dates, topics, call for abstracts,
 speakers.html            Speakers & Committee (Plenary / Keynote / Invited / Committee tabs)
 registration.html        Fees & key dates
 abstract-submission.html Netlify abstract form with required file upload
+revise-abstract.html     Private token-based abstract review/revision form
 thank-you.html           Successful form-submission destination
 program.html             Topics & program
 venue.html               Venue & accommodation
@@ -22,6 +23,7 @@ sponsorship.html         Sponsorship tiers
 css/style.css            All styles (design tokens in :root)
 js/tabs.js               Tab switcher for speakers page
 js/mobile-nav.js         Accessible mobile navigation
+js/revision-form.js      Secure revision lookup, prefill, and file validation
 netlify/functions/       Verified form submission -> Google Sheets sync
 google-apps-script/      Google Sheets web-app receiver and setup guide
 scripts/check_site.py    Static link, metadata, image, and structure checks
@@ -56,6 +58,6 @@ The publish directory is the repo root. After merging and deploying the form:
 
 ## Google Sheets workflow
 
-Verified submissions can be copied automatically to the shared `PBAST10 Abstract Submission Tracker`. Follow `google-apps-script/README.md` to deploy the receiver and add the two required Netlify environment variables. The integration uses a per-submission UUID to prevent duplicate rows if an event is retried.
+Verified submissions can be copied automatically to the shared `PBAST10 Abstract Submission Tracker`. Follow `google-apps-script/README.md` to deploy the receiver and add the two required Netlify environment variables. The integration uses per-event UUIDs to prevent duplicate processing if an event is retried. It also emails a private revision link, keeps the latest version in `Abstract Tracker`, and appends every version to `Revision History`.
 
 Uploaded abstracts may contain personal information. Limit Netlify access to committee members who need it, define a retention/deletion schedule, and do not collect passports or government IDs in this form.
