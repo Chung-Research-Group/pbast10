@@ -38,6 +38,12 @@ assert.equal(forwarded.url, "https://example.test/exec");
 assert.equal(forwarded.body.action, "create");
 assert.equal(forwarded.body.submissionId, "test-submission-1");
 
+forwarded = null;
+const sampleWithoutFormName = { ...sampleData };
+delete sampleWithoutFormName["form-name"];
+await netlifyHandler.formSubmitted({ data: sampleWithoutFormName });
+assert.equal(forwarded.body.action, "create", "a submission must be inferred when Netlify omits form-name");
+
 const revisionData = {
   ...sampleData,
   "form-name": "abstract-revision",
@@ -48,6 +54,12 @@ const revisionData = {
 await netlifyHandler.formSubmitted({ data: revisionData });
 assert.equal(forwarded.body.action, "revise");
 assert.equal(forwarded.body.eventId, "revision-event-1");
+
+forwarded = null;
+const revisionWithoutFormName = { ...revisionData };
+delete revisionWithoutFormName["form-name"];
+await netlifyHandler.formSubmitted({ data: revisionWithoutFormName });
+assert.equal(forwarded.body.action, "revise", "a revision must be inferred when Netlify omits form-name");
 
 forwarded = null;
 await netlifyHandler.formSubmitted({ data: { "form-name": "another-form" } });
