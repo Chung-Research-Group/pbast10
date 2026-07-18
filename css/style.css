@@ -133,9 +133,10 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .aff .dept,.person-aff .dept{display:block;color:var(--ink);font-weight:500}
 .person-aff{display:block;text-align:right;color:var(--muted);line-height:1.45}
 
-.keynote-card{background:#fff;border:1px solid var(--line);padding:22px 26px;display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+.keynote-grid{gap:16px}
+.keynote-card{height:100%;background:#fff;border:1px solid var(--line);padding:24px 26px;display:grid;grid-template-columns:minmax(130px,.7fr) minmax(0,1.3fr);align-items:start;gap:24px}
 .keynote-card .name{font:700 17px var(--serif);color:var(--ink)}
-.keynote-card .aff{font:400 15px var(--sans);color:var(--muted);text-align:right}
+.keynote-card .aff{font:400 15px/1.5 var(--sans);color:var(--muted);text-align:right}
 
 .chair-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--navy);padding:40px;display:flex;gap:32px;align-items:center}
 .chair-card img{width:150px;height:150px;border-radius:50%;object-fit:cover;object-position:top;flex:none;border:1px solid var(--line)}
@@ -260,7 +261,8 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .chair-card{flex-direction:column;align-items:flex-start;padding:26px 22px;gap:18px}
   .tabs{flex-wrap:wrap}
   .tabs a{padding:10px 14px;font-size:14px}
-  .keynote-card{align-items:flex-start;flex-direction:column}
+  .keynote-card{grid-template-columns:1fr;gap:8px}
+  .keynote-card .aff{text-align:left}
   .section-title,h2.sub{font-size:24px}
   .divider-top[style*="grid-template-columns"]{grid-template-columns:1fr!important}
   .form-grid{grid-template-columns:1fr}
