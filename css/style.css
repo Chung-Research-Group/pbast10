@@ -176,8 +176,9 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .fee-row > div + div{text-align:center;font-weight:700;color:var(--navy);border-left:1px solid var(--line2)}
 
 /* sponsor tiers */
-.sponsorship-tiers{align-items:start}
-.tier-card{background:#fff;border:1px solid var(--line);padding:40px 28px}
+.sponsorship-lead{max-width:980px}
+.sponsorship-tiers{align-items:stretch}
+.tier-card{height:100%;background:#fff;border:1px solid var(--line);padding:40px 28px}
 .tier-card.platinum{border-top:5px solid #7b8794}
 .tier-card.gold{border-top:5px solid var(--gold)}
 .tier-card .price{display:flex;align-items:baseline;gap:6px;white-space:nowrap;font:700 clamp(23px,2.45vw,30px) var(--serif);color:var(--ink);margin-bottom:22px}
