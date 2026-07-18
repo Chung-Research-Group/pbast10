@@ -162,6 +162,8 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .fee-table tbody th{font-weight:600;color:var(--ink);text-align:left}
 .fee-table tbody td{font-weight:700;color:var(--navy);border-left:1px solid var(--line2)}
 .fee-table tbody tr:last-child th,.fee-table tbody tr:last-child td{border-bottom:0}
+.registration-fees{max-width:860px}
+.fee-table .fee-krw{display:block;margin-top:3px;font:500 13px/1.35 var(--sans);color:var(--muted);white-space:nowrap}
 .fee-row{display:grid;grid-template-columns:1.2fr 1fr 1fr;font:400 16px var(--sans);border-bottom:1px solid var(--line2)}
 .fee-row:last-child{border-bottom:0}
 .fee-row.head{background:var(--navy);color:#fff;font:600 15.5px var(--sans);border-bottom:0}
@@ -252,6 +254,7 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .site-footer > span:last-child{text-align:left}
   .fee-table{font-size:13.5px}
   .fee-table th,.fee-table td{padding:10px 8px}
+  .fee-table .fee-krw{font-size:11.5px;white-space:normal}
   .chair-card{flex-direction:column;align-items:flex-start;padding:26px 22px;gap:18px}
   .tabs{flex-wrap:wrap}
   .tabs a{padding:10px 14px;font-size:14px}
