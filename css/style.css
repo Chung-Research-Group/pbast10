@@ -174,13 +174,16 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .fee-row > div + div{text-align:center;font-weight:700;color:var(--navy);border-left:1px solid var(--line2)}
 
 /* sponsor tiers */
-.tier-card{background:#fff;border:1px solid var(--line);padding:40px 36px}
+.sponsorship-tiers{align-items:start}
+.tier-card{background:#fff;border:1px solid var(--line);padding:40px 28px}
 .tier-card.platinum{border-top:5px solid #7b8794}
 .tier-card.gold{border-top:5px solid var(--gold)}
-.tier-card .price{font:700 34px var(--serif);color:var(--ink);margin-bottom:22px}
-.tier-card .benefits{display:flex;flex-direction:column;gap:12px;font:400 16px/1.55 var(--sans);color:var(--body)}
-.tier-card .benefits div{display:flex;gap:10px}
-.tier-card .benefits div::before{content:"—";color:var(--navy)}
+.tier-card .price{display:flex;align-items:baseline;gap:6px;white-space:nowrap;font:700 clamp(23px,2.45vw,30px) var(--serif);color:var(--ink);margin-bottom:22px}
+.tier-card .price span{font:600 clamp(12.5px,1.25vw,15.5px)/1.2 var(--sans);color:var(--muted)}
+.tier-card .benefits{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none;font:400 16px/1.55 var(--sans);color:var(--body)}
+.tier-card .benefits li{display:flex;gap:10px}
+.tier-card .benefits li::before{content:"—";color:var(--navy);flex:none}
+.sponsorship-note{margin:16px 0 40px;font:500 14px/1.5 var(--sans);color:var(--muted)}
 
 .logo-slot{background:#fff;border:1px dashed var(--chip-border);display:flex;align-items:center;justify-content:center;font:500 13px var(--sans);color:var(--faint)}
 
@@ -257,4 +260,6 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .divider-top[style*="grid-template-columns"]{grid-template-columns:1fr!important}
   .form-grid{grid-template-columns:1fr}
   .form-field.full{grid-column:auto}
+  .tier-card{padding:30px 22px}
+  .cta-band{flex-direction:column;align-items:flex-start;padding:28px 24px}
 }
