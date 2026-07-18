@@ -180,9 +180,9 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .tier-card.gold{border-top:5px solid var(--gold)}
 .tier-card .price{display:flex;align-items:baseline;gap:6px;white-space:nowrap;font:700 clamp(23px,2.45vw,30px) var(--serif);color:var(--ink);margin-bottom:22px}
 .tier-card .price span{font:600 clamp(12.5px,1.25vw,15.5px)/1.2 var(--sans);color:var(--muted)}
-.tier-card .benefits{display:flex;flex-direction:column;gap:12px;font:400 16px/1.55 var(--sans);color:var(--body)}
-.tier-card .benefits div{display:flex;gap:10px}
-.tier-card .benefits div::before{content:"—";color:var(--navy)}
+.tier-card .benefits{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none;font:400 16px/1.55 var(--sans);color:var(--body)}
+.tier-card .benefits li{display:flex;gap:10px}
+.tier-card .benefits li::before{content:"—";color:var(--navy);flex:none}
 
 .logo-slot{background:#fff;border:1px dashed var(--chip-border);display:flex;align-items:center;justify-content:center;font:500 13px var(--sans);color:var(--faint)}
 
