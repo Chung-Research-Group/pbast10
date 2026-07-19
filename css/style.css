@@ -215,6 +215,8 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color:var(--body)}
 .travel-option-grid{align-items:stretch}
 .travel-option-grid > .card{height:100%}
+.visa-card-grid{align-items:stretch}
+.visa-card-grid > .card,.visa-card-grid > .panel-navy{height:100%}
 .mb-14{margin-bottom:14px}.mb-18{margin-bottom:18px}.mb-26{margin-bottom:26px}
 .mb-28{margin-bottom:28px}.mb-40{margin-bottom:40px}.mb-52{margin-bottom:52px}.mb-56{margin-bottom:56px}
 .mt-36{margin-top:36px}.mt-44{margin-top:44px}
