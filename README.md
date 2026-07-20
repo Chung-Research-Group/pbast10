@@ -4,7 +4,7 @@ The 10th Pacific Basin Conference on Adsorption Science & Technology
 
 May 31–June 3, 2027 · Yonsei University, Seoul, Republic of Korea
 
-Live at https://pbast10.org (Netlify + Squarespace DNS)
+Live at https://pbast10.org
 
 ## Structure
 
