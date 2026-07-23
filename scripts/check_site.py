@@ -99,6 +99,15 @@ for path in HTML_FILES:
 if not (ROOT / "robots.txt").exists() or not (ROOT / "sitemap.xml").exists():
     errors.append("robots.txt or sitemap.xml is missing")
 
+for form_page in ("abstract-submission.html", "revise-abstract.html"):
+    source = (ROOT / form_page).read_text(encoding="utf-8")
+    for marker in ("data-country-autocomplete", "data-institution-autocomplete", "js/autocomplete.js"):
+        if marker not in source:
+            errors.append(f"{form_page}: missing autocomplete integration ({marker})")
+
+if not (ROOT / "js" / "autocomplete.js").exists():
+    errors.append("js/autocomplete.js is missing")
+
 for path in (ROOT / "google-apps-script").glob("*"):
     if path.is_file() and "pbast10.org@gmail.com" in path.read_text(encoding="utf-8"):
         errors.append(f"{path.relative_to(ROOT)}: retired Gmail contact remains")
