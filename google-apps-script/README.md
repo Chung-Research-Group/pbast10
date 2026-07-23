@@ -20,16 +20,23 @@ while signed in as `secretariat@pbast10.org`.
 
 - creates `PBAST10 Abstract Submission Tracker` in the Workspace account;
 - creates and formats `Summary`, `Abstract Tracker`, and `Revision History`;
+- creates a hidden `Lists` tab and applies the committee workflow dropdowns,
+  filters, date formats, column widths, and status colors used by the prior
+  tracker template;
 - adds live counts for total, new, accepted, oral, poster, rejected, and
   notifications sent;
-- generates a new random `SYNC_SECRET`;
+- generates a random `SYNC_SECRET` only when the property does not already
+  exist;
 - sets the official reply address to `secretariat@pbast10.org`;
 - sets the site URL and revision deadline defaults.
 
 It is safe to run the initializer again. It reuses the configured spreadsheet
 and secret and does not delete submissions. Re-running it also creates or
-refreshes the `Summary` tab, so an existing installation can add the dashboard
-without rebuilding the tracker.
+refreshes the tracker formatting, dropdowns, hidden `Lists` tab, and `Summary`
+tab without rebuilding the tracker. Netlify's `SHEETS_SYNC_SECRET` does not
+need to be changed after a normal rerun. A new secret is generated only after
+deleting `SYNC_SECRET` from Script Properties or using a different Apps Script
+project.
 
 Open **Execution log** after the run and save these two outputs temporarily:
 
