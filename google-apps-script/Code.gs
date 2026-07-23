@@ -1,8 +1,8 @@
 /**
  * PBAST10 Netlify Forms -> Google Sheets receiver.
  *
- * Required script properties:
- *   SPREADSHEET_ID, SYNC_SECRET
+ * Run initializePBAST10() once while signed in as secretariat@pbast10.org.
+ * It creates a new tracker spreadsheet and all required script properties.
  *
  * Optional script properties:
  *   SITE_URL, REPLY_TO_EMAIL, REVISION_DEADLINE
@@ -10,8 +10,18 @@
 var TRACKER_SHEET = 'Abstract Tracker';
 var HISTORY_SHEET = 'Revision History';
 var SITE_URL_DEFAULT = 'https://pbast10.org';
-var REPLY_TO_DEFAULT = 'pbast10.org@gmail.com';
+var REPLY_TO_DEFAULT = 'secretariat@pbast10.org';
 var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
+var TRACKER_HEADERS = [
+  'Submission ID', 'Submitted At', 'Last Name', 'First Name', 'Full Name',
+  'Email', 'Institution / Affiliation', 'Country / Region',
+  'Presentation Preference', 'Primary Topic', 'Abstract Title', 'Co-authors',
+  'Abstract File URL', 'Consent', 'Intake Status', 'Reviewer 1',
+  'Reviewer 1 Decision', 'Reviewer 2', 'Reviewer 2 Decision', 'Final Decision',
+  'Final Presentation Type', 'Notification Status', 'Notes', 'Edit Token Hash',
+  'Revision Count', 'Last Revised At', 'Last Revision Event ID',
+  'Confirmation Email Status', 'Confirmation Email Sent At'
+];
 
 var COL = {
   SUBMISSION_ID: 1,
@@ -78,6 +88,64 @@ function doPost(e) {
   } finally {
     if (lock.hasLock()) lock.releaseLock();
   }
+}
+
+/**
+ * Creates a clean PBAST10 tracker and generates the Netlify shared secret.
+ * This function is idempotent: running it again reuses the configured
+ * spreadsheet and does not replace an existing secret or submission data.
+ */
+function initializePBAST10() {
+  var properties = PropertiesService.getScriptProperties();
+  var spreadsheetId = properties.getProperty('SPREADSHEET_ID');
+  var spreadsheet;
+
+  if (spreadsheetId) {
+    spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  } else {
+    spreadsheet = SpreadsheetApp.create('PBAST10 Abstract Submission Tracker');
+    spreadsheetId = spreadsheet.getId();
+    properties.setProperty('SPREADSHEET_ID', spreadsheetId);
+  }
+
+  if (!properties.getProperty('SYNC_SECRET')) {
+    properties.setProperty('SYNC_SECRET', createSyncSecret_());
+  }
+  if (!properties.getProperty('SITE_URL')) {
+    properties.setProperty('SITE_URL', SITE_URL_DEFAULT);
+  }
+  if (!properties.getProperty('REPLY_TO_EMAIL')) {
+    properties.setProperty('REPLY_TO_EMAIL', REPLY_TO_DEFAULT);
+  }
+  if (!properties.getProperty('REVISION_DEADLINE')) {
+    properties.setProperty('REVISION_DEADLINE', REVISION_DEADLINE_DEFAULT);
+  }
+
+  var tracker = spreadsheet.getSheetByName(TRACKER_SHEET);
+  if (!tracker) {
+    var sheets = spreadsheet.getSheets();
+    if (sheets.length === 1 && sheets[0].getLastRow() === 0) {
+      tracker = sheets[0];
+      tracker.setName(TRACKER_SHEET);
+    } else {
+      tracker = spreadsheet.insertSheet(TRACKER_SHEET);
+    }
+  }
+  ensureTrackerHeaders_(tracker);
+  ensureHistoryHeaders_(spreadsheet);
+
+  var result = {
+    spreadsheetUrl: spreadsheet.getUrl(),
+    spreadsheetId: spreadsheetId,
+    syncSecret: properties.getProperty('SYNC_SECRET'),
+    replyTo: properties.getProperty('REPLY_TO_EMAIL'),
+    revisionDeadline: properties.getProperty('REVISION_DEADLINE')
+  };
+  Logger.log('PBAST10 setup complete. Copy these values to Netlify:');
+  Logger.log('GOOGLE_SHEETS_WEBHOOK_URL = add the /exec URL after deploying this script as a web app');
+  Logger.log('SHEETS_SYNC_SECRET = ' + result.syncSecret);
+  Logger.log('Spreadsheet = ' + result.spreadsheetUrl);
+  return result;
 }
 
 function createSubmission_(spreadsheet, sheet, payload, properties) {
@@ -319,17 +387,7 @@ function sendEmailChangedNotice_(oldEmail, row, properties) {
 }
 
 function appendHistory_(spreadsheet, trackerRow, eventId, revisionNumber, recordedAt, eventType) {
-  var history = spreadsheet.getSheetByName(HISTORY_SHEET);
-  if (!history) history = spreadsheet.insertSheet(HISTORY_SHEET);
-  if (history.getLastRow() === 0) {
-    history.appendRow([
-      'Submission ID', 'Event ID', 'Revision Number', 'Recorded At', 'Event Type',
-      'Last Name', 'First Name', 'Full Name', 'Email', 'Institution / Affiliation',
-      'Country / Region', 'Presentation Preference', 'Primary Topic', 'Abstract Title',
-      'Co-authors', 'Abstract File URL', 'Consent'
-    ]);
-    history.setFrozenRows(1);
-  }
+  var history = ensureHistoryHeaders_(spreadsheet);
   history.appendRow([
     clean_(trackerRow[COL.SUBMISSION_ID - 1]),
     eventId,
@@ -352,13 +410,28 @@ function appendHistory_(spreadsheet, trackerRow, eventId, revisionNumber, record
 }
 
 function ensureTrackerHeaders_(sheet) {
-  var requiredColumns = COL.CONFIRMATION_SENT_AT;
+  var requiredColumns = TRACKER_HEADERS.length;
   var currentColumns = sheet.getMaxColumns();
   if (currentColumns < requiredColumns) {
     sheet.insertColumnsAfter(currentColumns, requiredColumns - currentColumns);
   }
-  var headers = [['Edit Token Hash', 'Revision Count', 'Last Revised At', 'Last Revision Event ID', 'Confirmation Email Status', 'Confirmation Email Sent At']];
-  sheet.getRange(1, COL.TOKEN_HASH, 1, headers[0].length).setValues(headers);
+  sheet.getRange(1, 1, 1, TRACKER_HEADERS.length).setValues([TRACKER_HEADERS]);
+  sheet.setFrozenRows(1);
+}
+
+function ensureHistoryHeaders_(spreadsheet) {
+  var history = spreadsheet.getSheetByName(HISTORY_SHEET);
+  if (!history) history = spreadsheet.insertSheet(HISTORY_SHEET);
+  if (history.getLastRow() === 0) {
+    history.appendRow([
+      'Submission ID', 'Event ID', 'Revision Number', 'Recorded At', 'Event Type',
+      'Last Name', 'First Name', 'Full Name', 'Email', 'Institution / Affiliation',
+      'Country / Region', 'Presentation Preference', 'Primary Topic', 'Abstract Title',
+      'Co-authors', 'Abstract File URL', 'Consent'
+    ]);
+  }
+  history.setFrozenRows(1);
+  return history;
 }
 
 function editableDataFromRow_(row) {
@@ -450,6 +523,12 @@ function isRevisionClosed_(properties) {
 
 function createToken_() {
   return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
+}
+
+function createSyncSecret_() {
+  return (
+    Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid()
+  ).replace(/-/g, '');
 }
 
 function hashToken_(token) {

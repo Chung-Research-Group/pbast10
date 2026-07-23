@@ -76,6 +76,8 @@ for path in HTML_FILES:
         errors.append(f"{rel}: missing canonical URL")
     if "forms.gle" in source or "fonts.googleapis.com" in source:
         errors.append(f"{rel}: blocked external Google dependency remains")
+    if "pbast10.org@gmail.com" in source:
+        errors.append(f"{rel}: retired Gmail contact remains")
 
     for image in parser.images:
         src = image.get("src", "")
@@ -96,6 +98,10 @@ for path in HTML_FILES:
 
 if not (ROOT / "robots.txt").exists() or not (ROOT / "sitemap.xml").exists():
     errors.append("robots.txt or sitemap.xml is missing")
+
+for path in (ROOT / "google-apps-script").glob("*"):
+    if path.is_file() and "pbast10.org@gmail.com" in path.read_text(encoding="utf-8"):
+        errors.append(f"{path.relative_to(ROOT)}: retired Gmail contact remains")
 
 if errors:
     print("Site checks failed:")

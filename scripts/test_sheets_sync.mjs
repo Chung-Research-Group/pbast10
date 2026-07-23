@@ -148,6 +148,7 @@ class MockRange {
 
 class MockSheet {
   constructor(name, rows = []) { this.name = name; this.rows = rows; }
+  setName(name) { this.name = name; return this; }
   getLastRow() { return this.rows.length; }
   getMaxColumns() { return Math.max(26, ...this.rows.map((row) => row.length)); }
   insertColumnsAfter() {}
@@ -176,6 +177,10 @@ const sheets = new Map([[tracker.name, tracker]]);
 const spreadsheet = {
   getSheetByName: (name) => sheets.get(name) || null,
   insertSheet: (name) => { const sheet = new MockSheet(name); sheets.set(name, sheet); return sheet; },
+  getSheets: () => [...sheets.values()],
+  getId: () => "new-workspace-sheet-id",
+  getUrl: () => "https://docs.google.com/spreadsheets/d/new-workspace-sheet-id/edit",
+  getName: () => "PBAST10 Abstract Submission Tracker",
 };
 const sentEmails = [];
 let uuidCounter = 0;
@@ -184,13 +189,10 @@ function textOutput(body) {
   return { body, setMimeType() { return this; } };
 }
 
-const properties = new Map([
-  ["SYNC_SECRET", "test-secret"],
-  ["SPREADSHEET_ID", "sheet-id"],
-  ["REVISION_DEADLINE", "2099-11-30T23:59:59+09:00"],
-]);
+const properties = new Map();
 const context = {
   console,
+  Logger: { log() {} },
   Date,
   JSON,
   String,
@@ -198,8 +200,16 @@ const context = {
   isNaN,
   encodeURIComponent,
   LockService: { getScriptLock: () => ({ waitLock() {}, hasLock: () => true, releaseLock() {} }) },
-  PropertiesService: { getScriptProperties: () => ({ getProperty: (key) => properties.get(key) || null }) },
-  SpreadsheetApp: { openById: () => spreadsheet },
+  PropertiesService: {
+    getScriptProperties: () => ({
+      getProperty: (key) => properties.get(key) || null,
+      setProperty: (key, value) => { properties.set(key, String(value)); },
+    }),
+  },
+  SpreadsheetApp: {
+    create: () => spreadsheet,
+    openById: () => spreadsheet,
+  },
   Utilities: {
     getUuid: () => `00000000-0000-4000-8000-${String(++uuidCounter).padStart(12, "0")}`,
     computeDigest: (_, value) => [...crypto.createHash("sha256").update(value).digest()].map((n) => n > 127 ? n - 256 : n),
@@ -217,8 +227,20 @@ vm.createContext(context);
 vm.runInContext(fs.readFileSync(new URL("../google-apps-script/Code.gs", import.meta.url), "utf8"), context);
 
 function callAppsScript(payload) {
-  return JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ secret: "test-secret", ...payload }) } }).body);
+  return JSON.parse(context.doPost({
+    postData: { contents: JSON.stringify({ secret: properties.get("SYNC_SECRET"), ...payload }) },
+  }).body);
 }
+
+const setup = context.initializePBAST10();
+assert.equal(setup.spreadsheetId, "new-workspace-sheet-id");
+assert.equal(setup.replyTo, "secretariat@pbast10.org");
+assert.equal(properties.get("SPREADSHEET_ID"), "new-workspace-sheet-id");
+assert.match(properties.get("SYNC_SECRET"), /^[a-f0-9]{96}$/);
+assert.deepEqual(tracker.rows[0], Array.from(context.TRACKER_HEADERS));
+const originalSecret = properties.get("SYNC_SECRET");
+context.initializePBAST10();
+assert.equal(properties.get("SYNC_SECRET"), originalSecret, "rerunning setup must not rotate the shared secret");
 
 const createResult = callAppsScript({
   action: "create",
@@ -235,6 +257,7 @@ assert.equal(tracker.rows[1][21], "Not sent", "decision notification status must
 assert.equal(tracker.rows[1][24], 0);
 assert.equal(tracker.rows[1][27], "Confirmation sent");
 assert.equal(sentEmails.length, 1);
+assert.equal(sentEmails[0].replyTo, "secretariat@pbast10.org");
 
 const token = sentEmails[0].body.match(/#token=([a-f0-9]{64})/i)?.[1];
 assert.ok(token, "confirmation email must contain a 64-character token");
