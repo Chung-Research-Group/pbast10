@@ -109,8 +109,9 @@ Use a disposable test submission and verify all of the following:
 3. The submitter receives the confirmation email.
 4. The message header shows the Workspace account as the sender and
    `secretariat@pbast10.org` as Reply-To.
-5. The subject does not contain the private submission UUID, and the message
-   includes both a plain-text body and a minimal HTML body.
+5. The subject begins with `[PBAST10]`, contains the non-secret submission ID,
+   and the message includes both a plain-text body and a minimal HTML body with
+   exactly one direct revision link.
 6. The private revision link loads the submitted data.
 7. A revised PDF updates the tracker and appends one row to `Revision History`.
 8. The old revision token no longer works.
