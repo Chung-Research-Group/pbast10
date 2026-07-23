@@ -42,6 +42,8 @@ var COL = {
   FILE_URL: 13,
   CONSENT: 14,
   INTAKE_STATUS: 15,
+  FINAL_DECISION: 20,
+  FINAL_PRESENTATION_TYPE: 21,
   NOTES: 23,
   TOKEN_HASH: 24,
   REVISION_COUNT: 25,
@@ -81,6 +83,7 @@ function doPost(e) {
     var action = clean_(payload.action) || 'create';
 
     if (action === 'get') return getSubmission_(sheet, payload, properties);
+    if (action === 'withdraw') return withdrawSubmission_(spreadsheet, sheet, payload, properties);
     if (action === 'revise') return reviseSubmission_(spreadsheet, sheet, payload, properties);
     if (action === 'create') return createSubmission_(spreadsheet, sheet, payload, properties);
 
@@ -315,6 +318,54 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
   return jsonResponse_({ ok: true, duplicate: false, submissionId: clean_(current[0]), revisionCount: revisionNumber });
 }
 
+function withdrawSubmission_(spreadsheet, sheet, payload, properties) {
+  if (isRevisionClosed_(properties)) {
+    return jsonResponse_({ ok: false, code: 'REVISION_CLOSED', error: 'The abstract revision and withdrawal period has closed.' });
+  }
+
+  var token = clean_(payload.token);
+  if (!token) return jsonResponse_({ ok: false, code: 'INVALID_LINK', error: 'This revision link is invalid or has expired.' });
+
+  var rowNumber = findRowByValue_(sheet, COL.TOKEN_HASH, hashToken_(token));
+  if (!rowNumber) return jsonResponse_({ ok: false, code: 'INVALID_LINK', error: 'This revision link is invalid or has expired.' });
+
+  var row = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  if (clean_(row[COL.INTAKE_STATUS - 1]) === 'Withdrawn') {
+    return jsonResponse_({ ok: true, duplicate: true, submission: editableDataFromRow_(row) });
+  }
+
+  var withdrawnAt = new Date();
+  var eventId = 'withdrawal-' + Utilities.getUuid();
+  var revisionNumber = Number(row[COL.REVISION_COUNT - 1] || 0);
+  var existingNotes = clean_(row[COL.NOTES - 1]);
+  var withdrawalNote = 'Withdrawn by submitter on ' + withdrawnAt.toISOString();
+
+  sheet.getRange(rowNumber, COL.INTAKE_STATUS).setValue('Withdrawn');
+  sheet.getRange(rowNumber, COL.FINAL_DECISION).setValue('Withdrawn');
+  sheet.getRange(rowNumber, COL.FINAL_PRESENTATION_TYPE).setValue('None');
+  sheet.getRange(rowNumber, COL.NOTES).setValue(existingNotes ? existingNotes + '\n' + withdrawalNote : withdrawalNote);
+
+  row = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  appendHistory_(spreadsheet, row, eventId, revisionNumber, withdrawnAt, 'Withdrawal');
+
+  var emailSent = true;
+  try {
+    sendWithdrawalEmail_(row, properties);
+  } catch (error) {
+    emailSent = false;
+    var note = clean_(sheet.getRange(rowNumber, COL.NOTES).getValue());
+    sheet.getRange(rowNumber, COL.NOTES).setValue(note + '\nWithdrawal email error: ' + String(error.message || error));
+    console.error(error);
+  }
+
+  return jsonResponse_({
+    ok: true,
+    duplicate: false,
+    emailSent: emailSent,
+    submission: editableDataFromRow_(row)
+  });
+}
+
 function issueTokenAndSend_(sheet, rowNumber, properties, isRevision) {
   var token = createToken_();
   sheet.getRange(rowNumber, COL.TOKEN_HASH).setValue(hashToken_(token));
@@ -350,7 +401,7 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     'Submission ID: ' + submissionId,
     'Abstract title: ' + title,
     '',
-    'Review or revise your abstract before ' + deadline + ':',
+    'Review, revise, or withdraw your abstract before ' + deadline + ':',
     editUrl,
     '',
     'Keep this private link secure. It provides access to your submission.',
@@ -366,7 +417,7 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     '<strong>Submission ID:</strong> ' + html_(submissionId) + '</p>' +
     '<p style="margin:28px 0"><a href="' + html_(editUrl) + '" ' +
     'style="background:#003876;color:#ffffff;text-decoration:none;padding:14px 22px;' +
-    'display:inline-block;font-weight:bold">Review or Revise Your Abstract</a></p>' +
+    'display:inline-block;font-weight:bold">Review, Revise, or Withdraw Your Abstract</a></p>' +
     '<p style="font-size:13px;color:#6b6355">Revisions close on ' + html_(deadline) + '. Keep this private link secure because it provides access to your submission.</p>' +
     '<p>PBAST10 Organizing Committee<br>Contact: ' +
     html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '</p></div>';
@@ -390,6 +441,55 @@ function sendEmailChangedNotice_(oldEmail, row, properties) {
     body: 'The contact email address for PBAST10 abstract ' + submissionId + ' was changed during a revision. If you did not make this change, reply to this email immediately.\n\nPBAST10 Organizing Committee',
     name: 'PBAST10 Organizing Committee',
     replyTo: properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT
+  });
+}
+
+function sendWithdrawalEmail_(row, properties) {
+  var submissionId = clean_(row[COL.SUBMISSION_ID - 1]);
+  var recipient = clean_(row[COL.EMAIL - 1]);
+  var name = clean_(row[COL.FULL_NAME - 1]);
+  var title = clean_(row[COL.TITLE - 1]);
+  var replyTo = properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT;
+  var subject = '[PBAST10] Abstract withdrawn — ' + submissionId;
+  var plainBody = [
+    'Dear ' + (name || 'Participant') + ',',
+    '',
+    'Your abstract has been withdrawn and will not be sent for review.',
+    '',
+    'Submission ID: ' + submissionId,
+    'Abstract title: ' + title,
+    '',
+    'To request reinstatement, contact ' + replyTo + '.',
+    '',
+    'PBAST10 Organizing Committee'
+  ].join('\n');
+  var htmlBody = '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#12233a;max-width:640px">' +
+    '<h2 style="color:#003876">PBAST10 Abstract Withdrawal Confirmation</h2>' +
+    '<p>Dear ' + html_(name || 'Participant') + ',</p>' +
+    '<p>Your abstract has been withdrawn and will not be sent for review.</p>' +
+    '<p><strong>Abstract title:</strong> ' + html_(title) + '<br>' +
+    '<strong>Submission ID:</strong> ' + html_(submissionId) + '</p>' +
+    '<p>To request reinstatement, contact ' + html_(replyTo) + '.</p>' +
+    '<p>PBAST10 Organizing Committee</p></div>';
+
+  if (typeof sendViaBrevo_ === 'function') {
+    return sendViaBrevo_({
+      to: recipient,
+      toName: name,
+      subject: subject,
+      textContent: plainBody,
+      htmlContent: htmlBody,
+      replyTo: replyTo
+    }, properties);
+  }
+
+  MailApp.sendEmail({
+    to: recipient,
+    subject: subject,
+    body: plainBody,
+    htmlBody: htmlBody,
+    name: 'PBAST10 Organizing Committee',
+    replyTo: replyTo
   });
 }
 
@@ -609,6 +709,7 @@ function editableDataFromRow_(row) {
     primaryTopic: clean_(row[COL.TOPIC - 1]),
     abstractTitle: clean_(row[COL.TITLE - 1]),
     coAuthors: clean_(row[COL.COAUTHORS - 1]),
+    intakeStatus: clean_(row[COL.INTAKE_STATUS - 1]),
     currentFileUrl: clean_(row[COL.FILE_URL - 1])
   };
 }
