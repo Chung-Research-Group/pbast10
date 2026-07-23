@@ -75,6 +75,12 @@
         <div class="form-field"><label for="presentation">Presentation preference *</label><select id="presentation" name="presentation-preference" required><option value="">Select one</option><option>Oral</option><option>Poster</option><option>No preference</option></select></div>
         <div class="form-field full"><label for="topic">Primary topic *</label><select id="topic" name="primary-topic" required><option value="">Select one</option><option>Adsorption equilibria and kinetics</option><option>Gas storage and separation</option><option>Carbon capture, utilization, and storage</option><option>Water treatment and environmental adsorption</option><option>Porous materials</option><option>Diffusion and transport in confined spaces</option><option>Molecular simulation and machine learning</option><option>Thermodynamics and interfacial phenomena</option><option>Industrial applications and process development</option></select></div>
         <div class="form-field full"><label for="title">Abstract title *</label><input id="title" name="abstract-title" type="text" required></div>
+        <div class="form-field full" id="current-authors-field">
+          <label>Current author record</label>
+          <p id="current-author-list" class="form-help"></p>
+          <p id="current-corresponding-authors" class="form-help"></p>
+          <p id="current-author-status" class="form-help">This read-only record will be refreshed from the revised PDF.</p>
+        </div>
         <div class="form-field full"><label for="abstract-file">Complete revised abstract file *</label><input id="abstract-file" name="abstract-file" type="file" accept=".pdf,application/pdf" aria-describedby="file-help" required><p class="form-help" id="file-help">Upload the complete revised version. PDF only; file size up to 7.5 MB. Author information will be refreshed from this PDF.</p></div>
         <div class="form-field full"><label class="checkbox-field"><input type="checkbox" name="consent" value="yes" required><span>I consent to the PBAST10 Organizing Committee using the revised information and file to review and administer my abstract submission. *</span></label></div>
         <div class="form-field full"><button id="revision-submit" class="btn btn-primary" type="submit">Submit Revised Abstract</button></div>

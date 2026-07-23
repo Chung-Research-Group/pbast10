@@ -277,6 +277,21 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
   var nextToken = createToken_();
   var firstName = clean_(data['first-name']);
   var lastName = clean_(data['last-name']);
+  var extractedAuthorList = clean_(data['pdf-author-list']);
+  var extractedCorrespondingAuthors = clean_(data['pdf-corresponding-authors']);
+  var extractionStatus = sheetText_(data['author-extraction-status']);
+  var authorList = extractedAuthorList
+    ? sheetText_(data['pdf-author-list'])
+    : previous[COL.AUTHORS - 1];
+  var correspondingAuthors = extractedCorrespondingAuthors
+    ? sheetText_(data['pdf-corresponding-authors'])
+    : previous[COL.CORRESPONDING_AUTHORS - 1];
+  if (!extractedAuthorList && clean_(previous[COL.AUTHORS - 1])) {
+    extractionStatus = sheetText_(
+      (clean_(data['author-extraction-status']) || 'Needs review: author extraction returned no author list.') +
+      ' Previous author record retained.'
+    );
+  }
 
   var updates = [
     sheetText_(lastName),
@@ -288,13 +303,13 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
     sheetText_(data['presentation-preference']),
     sheetText_(data['primary-topic']),
     sheetText_(data['abstract-title']),
-    sheetText_(data['pdf-author-list']),
+    authorList,
     fileUrl_(data['abstract-file']),
     sheetText_(data.consent)
   ];
   sheet.getRange(rowNumber, COL.LAST_NAME, 1, updates.length).setValues([updates]);
-  sheet.getRange(rowNumber, COL.CORRESPONDING_AUTHORS).setValue(sheetText_(data['pdf-corresponding-authors']));
-  sheet.getRange(rowNumber, COL.AUTHOR_EXTRACTION_STATUS).setValue(sheetText_(data['author-extraction-status']));
+  sheet.getRange(rowNumber, COL.CORRESPONDING_AUTHORS).setValue(correspondingAuthors);
+  sheet.getRange(rowNumber, COL.AUTHOR_EXTRACTION_STATUS).setValue(extractionStatus);
   sheet.getRange(rowNumber, COL.TOKEN_HASH).setValue(hashToken_(nextToken));
   sheet.getRange(rowNumber, COL.REVISION_COUNT).setValue(revisionNumber);
   sheet.getRange(rowNumber, COL.LAST_REVISED_AT).setValue(revisedAt);
@@ -632,6 +647,9 @@ function editableDataFromRow_(row) {
     presentationPreference: clean_(row[COL.PRESENTATION - 1]),
     primaryTopic: clean_(row[COL.TOPIC - 1]),
     abstractTitle: clean_(row[COL.TITLE - 1]),
+    authorList: clean_(row[COL.AUTHORS - 1]),
+    correspondingAuthors: clean_(row[COL.CORRESPONDING_AUTHORS - 1]),
+    authorExtractionStatus: clean_(row[COL.AUTHOR_EXTRACTION_STATUS - 1]),
     currentFileUrl: clean_(row[COL.FILE_URL - 1])
   };
 }

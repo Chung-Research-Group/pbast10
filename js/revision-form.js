@@ -79,6 +79,20 @@
       setValue('#topic', submission.primaryTopic);
       setValue('#title', submission.abstractTitle);
 
+      var authorList = document.querySelector('#current-author-list');
+      var correspondingAuthors = document.querySelector('#current-corresponding-authors');
+      var authorStatus = document.querySelector('#current-author-status');
+      authorList.textContent = submission.authorList
+        ? 'Authors: ' + submission.authorList
+        : 'No author list is currently stored. The revised PDF will be used to create it.';
+      correspondingAuthors.textContent = submission.correspondingAuthors
+        ? 'Corresponding author(s): ' + submission.correspondingAuthors
+        : '';
+      if (submission.authorExtractionStatus) {
+        authorStatus.textContent = submission.authorExtractionStatus +
+          ' The record is read-only here and will be refreshed from the revised PDF.';
+      }
+
       document.querySelector('#submission-summary-id').textContent = submission.submissionId || '';
       document.querySelector('#revision-summary').textContent = result.revisionCount
         ? 'Revisions previously submitted: ' + result.revisionCount

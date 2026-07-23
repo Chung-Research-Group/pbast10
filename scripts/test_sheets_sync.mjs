@@ -360,6 +360,16 @@ const lookup = callAppsScript({ action: "get", token });
 assert.equal(lookup.ok, true);
 assert.equal(lookup.submission.abstractTitle, sampleData["abstract-title"]);
 assert.equal(lookup.submission.email, "ada@example.org");
+assert.equal(
+  lookup.submission.authorList,
+  "'=HYPERLINK(\"https://example.invalid\",\"Lovelace, Ada\")",
+  "the revision page must receive the currently stored author record",
+);
+assert.equal(
+  lookup.submission.correspondingAuthors,
+  "'=ada@example.org",
+  "the revision page must receive the corresponding-author record",
+);
 assert.equal("tokenHash" in lookup.submission, false, "private metadata must not be returned");
 
 const revisedData = {
@@ -414,6 +424,33 @@ const duplicate = callAppsScript({
 assert.equal(duplicate.ok, true);
 assert.equal(duplicate.duplicate, true);
 assert.equal(history.rows.length, 3, "retry must not append another history row");
+
+const tokenAfterRevision = sentEmails[1].body.match(/#token=([a-f0-9]{64})/i)?.[1];
+assert.ok(tokenAfterRevision, "revision confirmation must contain the replacement token");
+const failedExtractionRevision = callAppsScript({
+  action: "revise",
+  eventId: "revision-event-2",
+  submittedAt: "2026-07-19T01:02:03.000Z",
+  data: {
+    ...revisedData,
+    "edit-token": tokenAfterRevision,
+    "pdf-author-list": "",
+    "pdf-corresponding-authors": "",
+    "author-extraction-status": "Needs review: automatic PDF text extraction failed.",
+  },
+});
+assert.equal(failedExtractionRevision.ok, true);
+assert.equal(
+  tracker.rows[1][11],
+  "Lovelace, Ada; Hopper, Grace",
+  "failed extraction must not erase the previous author list",
+);
+assert.equal(
+  tracker.rows[1][29],
+  "Lovelace, Ada — ada.new@example.org",
+  "failed extraction must not erase the previous corresponding-author record",
+);
+assert.match(tracker.rows[1][30], /Previous author record retained/);
 
 console.log("Abstract confirmation and revision tests passed.");
 
