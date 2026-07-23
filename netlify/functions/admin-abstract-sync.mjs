@@ -4,11 +4,14 @@
 const ADMIN_TOKEN_SHA256 =
   "9db6ce2aa54281eed9fe12af1e2e4a32099a7a4892e6ffa110ed2414831d357e";
 
-export default async (request) => {
+export function makeHandler({
+  tokenSha256 = ADMIN_TOKEN_SHA256,
+} = {}) {
+  return async (request) => {
   if (request.method !== "POST") {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
-  if (!(await authorized(request.headers.get("authorization")))) {
+  if (!(await authorized(request.headers.get("authorization"), tokenSha256))) {
     return json({ ok: false, error: "Unauthorized." }, 401);
   }
 
@@ -81,9 +84,12 @@ export default async (request) => {
     console.error("Administrator Google Sheets relay failed", error);
     return json({ ok: false, error: "Google Sheets is temporarily unavailable." }, 502);
   }
-};
+  };
+}
 
-async function authorized(header) {
+export default makeHandler();
+
+async function authorized(header, expectedHash) {
   const match = /^Bearer ([a-f0-9]{64})$/i.exec(String(header || ""));
   if (!match) return false;
   const digest = await crypto.subtle.digest(
@@ -93,7 +99,7 @@ async function authorized(header) {
   const actual = [...new Uint8Array(digest)]
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
-  return constantTimeEqual(actual, ADMIN_TOKEN_SHA256);
+  return constantTimeEqual(actual, expectedHash);
 }
 
 function constantTimeEqual(left, right) {
