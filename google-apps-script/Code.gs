@@ -10,6 +10,8 @@
 var TRACKER_SHEET = 'Abstract Tracker';
 var HISTORY_SHEET = 'Revision History';
 var SUMMARY_SHEET = 'Summary';
+var LISTS_SHEET = 'Lists';
+var TRACKER_MAX_ROWS = 1000;
 var SITE_URL_DEFAULT = 'https://pbast10.org';
 var REPLY_TO_DEFAULT = 'secretariat@pbast10.org';
 var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
@@ -132,7 +134,8 @@ function initializePBAST10() {
       tracker = spreadsheet.insertSheet(TRACKER_SHEET);
     }
   }
-  ensureTrackerHeaders_(tracker);
+  ensureListsSheet_(spreadsheet);
+  ensureTrackerSheet_(tracker, spreadsheet);
   ensureHistoryHeaders_(spreadsheet);
   ensureSummarySheet_(spreadsheet);
 
@@ -421,6 +424,110 @@ function ensureTrackerHeaders_(sheet) {
   sheet.setFrozenRows(1);
 }
 
+function ensureTrackerSheet_(sheet, spreadsheet) {
+  ensureTrackerHeaders_(sheet);
+
+  if (sheet.getMaxRows() < TRACKER_MAX_ROWS) {
+    sheet.insertRowsAfter(sheet.getMaxRows(), TRACKER_MAX_ROWS - sheet.getMaxRows());
+  }
+
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(2);
+  sheet.getRange(1, 1, 1, TRACKER_HEADERS.length)
+    .setBackground('#e2e3e5')
+    .setFontWeight('bold')
+    .setVerticalAlignment('middle')
+    .setWrap(true);
+  sheet.setRowHeight(1, 32);
+  sheet.getRange(2, COL.SUBMITTED_AT, TRACKER_MAX_ROWS - 1, 1)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sheet.getRange(2, COL.LAST_REVISED_AT, TRACKER_MAX_ROWS - 1, 1)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+  sheet.getRange(2, COL.CONFIRMATION_SENT_AT, TRACKER_MAX_ROWS - 1, 1)
+    .setNumberFormat('yyyy-mm-dd hh:mm:ss');
+
+  var widths = [
+    190, 145, 105, 105, 145, 190, 210, 145, 145, 220,
+    260, 220, 300, 90, 115, 150, 150, 150, 150, 130,
+    150, 140, 240, 120, 100, 145, 150, 160, 170
+  ];
+  for (var i = 0; i < widths.length; i++) sheet.setColumnWidth(i + 1, widths[i]);
+
+  var existingFilter = sheet.getFilter();
+  if (existingFilter) existingFilter.remove();
+  sheet.getRange(1, 1, TRACKER_MAX_ROWS, COL.NOTES).createFilter();
+
+  var lists = spreadsheet.getSheetByName(LISTS_SHEET);
+  var validationBuilder = SpreadsheetApp.newDataValidation().setAllowInvalid(false);
+  sheet.getRange(2, COL.INTAKE_STATUS, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('A2:A5'), true).build());
+  sheet.getRange(2, 17, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('B2:B6'), true).build());
+  sheet.getRange(2, 19, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('B2:B6'), true).build());
+  sheet.getRange(2, 20, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('C2:C5'), true).build());
+  sheet.getRange(2, 21, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('D2:D5'), true).build());
+  sheet.getRange(2, 22, TRACKER_MAX_ROWS - 1, 1)
+    .setDataValidation(validationBuilder.requireValueInRange(lists.getRange('E2:E5'), true).build());
+
+  var rules = sheet.getConditionalFormatRules().filter(function (rule) {
+    var ranges = rule.getRanges();
+    for (var r = 0; r < ranges.length; r++) {
+      var column = ranges[r].getColumn();
+      if (column === COL.INTAKE_STATUS || column === 20 || column === 22) return false;
+    }
+    return true;
+  });
+  rules.push(
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Incomplete')
+      .setBackground('#f4cccc')
+      .setRanges([sheet.getRange('O2:O' + TRACKER_MAX_ROWS)])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Accept')
+      .setBackground('#d9ead3')
+      .setRanges([sheet.getRange('T2:T' + TRACKER_MAX_ROWS)])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Reject')
+      .setBackground('#f4cccc')
+      .setRanges([sheet.getRange('T2:T' + TRACKER_MAX_ROWS)])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Sent')
+      .setBackground('#cfe2f3')
+      .setRanges([sheet.getRange('V2:V' + TRACKER_MAX_ROWS)])
+      .build()
+  );
+  sheet.setConditionalFormatRules(rules);
+  sheet.setTabColor('#6d9eeb');
+}
+
+function ensureListsSheet_(spreadsheet) {
+  var lists = spreadsheet.getSheetByName(LISTS_SHEET);
+  if (!lists) lists = spreadsheet.insertSheet(LISTS_SHEET);
+
+  var values = [
+    ['Intake Status', 'Review Decision', 'Final Decision', 'Presentation Type', 'Notification Status'],
+    ['New', 'Accept Oral', 'Pending', 'Pending', 'Not Sent'],
+    ['Checked', 'Accept Poster', 'Accept', 'Oral', 'Sent'],
+    ['Incomplete', 'Revise', 'Reject', 'Poster', 'Confirmed'],
+    ['Withdrawn', 'Reject', 'Withdrawn', 'None', 'Failed'],
+    ['', 'Conflict', '', '', '']
+  ];
+  lists.getRange(1, 1, values.length, values[0].length).setValues(values);
+  lists.getRange(1, 1, 1, values[0].length)
+    .setBackground('#e2e3e5')
+    .setFontWeight('bold');
+  lists.setFrozenRows(1);
+  lists.autoResizeColumns(1, values[0].length);
+  if (!lists.isSheetHidden()) lists.hideSheet();
+  return lists;
+}
+
 function ensureHistoryHeaders_(spreadsheet) {
   var history = spreadsheet.getSheetByName(HISTORY_SHEET);
   if (!history) history = spreadsheet.insertSheet(HISTORY_SHEET);
@@ -445,13 +552,13 @@ function ensureSummarySheet_(spreadsheet) {
     ['PBAST10 Abstract Submission Summary', '', '', ''],
     ['', '', '', ''],
     ['Metric', 'Count', '', ''],
-    ['Total submissions', '=COUNTA(' + trackerRef + '!A2:A)', '', ''],
-    ['New / unchecked', '=COUNTIF(' + trackerRef + '!O2:O,"New")', '', ''],
-    ['Accepted', '=COUNTIF(' + trackerRef + '!T2:T,"Accepted")', '', ''],
-    ['Oral', '=COUNTIF(' + trackerRef + '!U2:U,"Oral")', '', ''],
-    ['Poster', '=COUNTIF(' + trackerRef + '!U2:U,"Poster")', '', ''],
-    ['Rejected', '=COUNTIF(' + trackerRef + '!T2:T,"Rejected")', '', ''],
-    ['Notifications sent', '=COUNTIF(' + trackerRef + '!V2:V,"Sent")', '', ''],
+    ['Total submissions', '=COUNTA(' + trackerRef + '!A2:A' + TRACKER_MAX_ROWS + ')', '', ''],
+    ['New / unchecked', '=COUNTIF(' + trackerRef + '!O2:O' + TRACKER_MAX_ROWS + ',"New")', '', ''],
+    ['Accepted', '=COUNTIF(' + trackerRef + '!T2:T' + TRACKER_MAX_ROWS + ',"Accept")', '', ''],
+    ['Oral', '=COUNTIF(' + trackerRef + '!U2:U' + TRACKER_MAX_ROWS + ',"Oral")', '', ''],
+    ['Poster', '=COUNTIF(' + trackerRef + '!U2:U' + TRACKER_MAX_ROWS + ',"Poster")', '', ''],
+    ['Rejected', '=COUNTIF(' + trackerRef + '!T2:T' + TRACKER_MAX_ROWS + ',"Reject")', '', ''],
+    ['Notifications sent', '=COUNTIF(' + trackerRef + '!V2:V' + TRACKER_MAX_ROWS + ',"Sent")+COUNTIF(' + trackerRef + '!V2:V' + TRACKER_MAX_ROWS + ',"Confirmed")', '', ''],
     ['', '', '', ''],
     ['Workflow notes', '', '', ''],
     [1, 'Netlify automatically appends verified submissions to Abstract Tracker.', '', ''],
