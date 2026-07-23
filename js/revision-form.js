@@ -78,7 +78,6 @@
       setValue('#presentation', submission.presentationPreference);
       setValue('#topic', submission.primaryTopic);
       setValue('#title', submission.abstractTitle);
-      setValue('#authors', submission.coAuthors);
 
       document.querySelector('#submission-summary-id').textContent = submission.submissionId || '';
       document.querySelector('#revision-summary').textContent = result.revisionCount
