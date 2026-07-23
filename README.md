@@ -24,7 +24,7 @@ css/style.css            All styles (design tokens in :root)
 js/tabs.js               Tab switcher for speakers page
 js/mobile-nav.js         Accessible mobile navigation
 js/revision-form.js      Secure revision lookup, prefill, and file validation
-netlify/functions/       Verified form submission -> Google Sheets sync
+netlify/functions/       PDF author extraction and submission -> Google Sheets sync
 google-apps-script/      Google Sheets web-app receiver and setup guide
 scripts/check_site.py    Static link, metadata, image, and structure checks
 robots.txt / sitemap.xml Search-engine discovery files
@@ -33,8 +33,8 @@ _headers                  Netlify security and cache headers
 assets/                   Images, local fonts, speakers, committee, and logo
 ```
 
-Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
-(Netlify, GitHub Pages, Cloudflare Pages) at this folder.
+The pages are plain static HTML/CSS/JS. The Netlify function has one server-side
+dependency, `pdfjs-dist`, installed from the root `package.json`.
 
 ## Editing notes
 
@@ -42,6 +42,7 @@ Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
 - **Sponsor logos** — add confirmed logos only after permission is recorded, then update the sponsor section in `index.html`.
 - **Speaker photos** — drop images in `assets/speakers/` and update `speakers.html`.
 - **Abstract form** — fields and the PDF-only upload restriction are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB. The Netlify event handler and Apps Script receiver also validate the uploaded file metadata.
+- **PDF author extraction** — `netlify/functions/lib/pdf-author-extractor.mjs` reads the first page of the completed conference template. It stores the complete author line, corresponding author name/email, and a review status in the tracker. Extraction failure does not block a valid submission.
 - **Contact email** — in the footer of every page and on `sponsorship.html`.
 - **Pre-commit check** — run `python scripts/check_site.py`.
 
@@ -51,13 +52,13 @@ The publish directory is the repo root. After merging and deploying the form:
 
 1. In Netlify, open **Forms** and make sure form detection is enabled.
 2. Trigger a new production deploy so Netlify detects `abstract-submission`.
-3. Submit one small test PDF through the live form.
+3. Submit one small PDF made from the official template through the live form.
 4. Confirm the submission and uploaded file appear under **Forms → abstract-submission**.
 5. Under **Project configuration → Notifications → Form submission notifications**, add the organizing committee email.
 6. Keep Netlify spam filtering enabled and review submissions regularly.
 
 ## Google Sheets workflow
 
-Verified submissions can be copied automatically to the shared `PBAST10 Abstract Submission Tracker`. Follow `google-apps-script/README.md` to deploy the receiver and add the two required Netlify environment variables. The integration uses per-event UUIDs to prevent duplicate processing if an event is retried. It also emails a private revision link, keeps the latest version in `Abstract Tracker`, and appends every version to `Revision History`.
+Verified submissions are copied automatically to the shared `PBAST10 Abstract Submission Tracker`. Follow `google-apps-script/README.md` to deploy the receiver and add the two required Netlify environment variables. The integration uses per-event UUIDs to prevent duplicate processing if an event is retried. It also emails a private revision link, keeps the latest version in `Abstract Tracker`, and appends every version to `Revision History`. The tracker can be downloaded as `.xlsx` from Google Sheets when an Excel file is needed.
 
 Uploaded abstracts may contain personal information. Limit Netlify access to committee members who need it, define a retention/deletion schedule, and do not collect passports or government IDs in this form.

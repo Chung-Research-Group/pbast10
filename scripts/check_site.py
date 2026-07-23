@@ -104,6 +104,8 @@ for form_page in ("abstract-submission.html", "revise-abstract.html"):
     for marker in ("data-country-autocomplete", "data-institution-autocomplete", "js/autocomplete.js"):
         if marker not in source:
             errors.append(f"{form_page}: missing autocomplete integration ({marker})")
+    if 'name="co-authors"' in source:
+        errors.append(f"{form_page}: obsolete manual co-author field remains")
 
 if not (ROOT / "js" / "autocomplete.js").exists():
     errors.append("js/autocomplete.js is missing")

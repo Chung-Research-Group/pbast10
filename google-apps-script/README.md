@@ -23,6 +23,8 @@ while signed in as `secretariat@pbast10.org`.
 - creates a hidden `Lists` tab and applies the committee workflow dropdowns,
   filters, date formats, column widths, and status colors used by the prior
   tracker template;
+- creates columns for the PDF author list, corresponding author(s), and
+  automatic extraction status;
 - adds live counts for total, new, accepted, oral, poster, rejected, and
   notifications sent;
 - generates a random `SYNC_SECRET` only when the property does not already
@@ -80,6 +82,10 @@ After later code changes, saving alone does not update the live endpoint. Use
 **Deploy -> Manage deployments -> Edit -> New version -> Deploy**. The `/exec`
 URL then remains unchanged.
 
+After installing a version that adds tracker columns, run `initializePBAST10()`
+once more. It updates the headers and formatting without deleting existing
+submissions or rotating the shared secret.
+
 The confirmation email is sent only by this Apps Script deployment. Changes to
 the email subject, plain-text body, or HTML body therefore require a new Apps
 Script deployment version, but do not require a Netlify redeploy, environment
@@ -106,16 +112,20 @@ Use a disposable test submission and verify all of the following:
 
 1. The submission appears in Netlify Forms.
 2. Exactly one row appears in `Abstract Tracker`.
-3. The submitter receives the confirmation email.
-4. The message header shows the Workspace account as the sender and
+3. `Author List (from PDF)` and `Corresponding Author(s) (from PDF)` match the
+   uploaded template.
+4. `Author Extraction Status` is `Extracted — verify against PDF`; committee
+   staff still compare the extracted fields with the PDF during intake.
+5. The submitter receives the confirmation email.
+6. The message header shows the Workspace account as the sender and
    `secretariat@pbast10.org` as Reply-To.
-5. The subject does not contain the private submission UUID, and the message
+7. The subject does not contain the private submission UUID, and the message
    includes both a plain-text body and a minimal HTML body.
-6. The private revision link loads the submitted data.
-7. A revised PDF updates the tracker and appends one row to `Revision History`.
-8. The old revision token no longer works.
-9. Replaying the same controlled event does not create a duplicate row.
-10. Delivery succeeds to Gmail, Outlook, and an institutional mailbox.
+8. The private revision link loads the submitted data.
+9. A revised PDF updates the tracker and appends one row to `Revision History`.
+10. The old revision token no longer works.
+11. Replaying the same controlled event does not create a duplicate row.
+12. Delivery succeeds to Gmail, Outlook, and an institutional mailbox.
 
 The official transactional path is:
 
@@ -134,3 +144,9 @@ Names are stored as **Family name, Given name**. Revision tokens are stored only
 as SHA-256 hashes, and each successful revision invalidates the prior token.
 Netlify remains the source backup; archive its CSV and uploaded files before
 deleting any form or submission.
+
+The extractor is deliberately non-blocking. Image-only/scanned PDFs, changed
+templates, missing corresponding-author labels, or ambiguous markers are saved
+with `Needs review` rather than rejected. The committee must resolve these rows
+against the uploaded PDF before using the author data for certificates,
+programs, or correspondence.

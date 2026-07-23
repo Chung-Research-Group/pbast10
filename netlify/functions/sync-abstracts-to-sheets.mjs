@@ -1,3 +1,5 @@
+import { extractPdfAuthorMetadata } from "./lib/pdf-author-extractor.mjs";
+
 // Runs after Netlify verifies a form submission and forwards it to Google Sheets.
 export default {
   async formSubmitted(event) {
@@ -13,6 +15,10 @@ export default {
 
     const uploadedPdf = validatePdfUpload(data["abstract-file"]);
     await validatePdfSignature(uploadedPdf.url);
+    const authorMetadata = await extractAuthorsWithoutBlockingSubmission(uploadedPdf.url);
+    data["pdf-author-list"] = authorMetadata.authorList;
+    data["pdf-corresponding-authors"] = authorMetadata.correspondingAuthors;
+    data["author-extraction-status"] = authorMetadata.extractionStatus;
 
     const webhookUrl = Netlify.env.get("GOOGLE_SHEETS_WEBHOOK_URL");
     const syncSecret = Netlify.env.get("SHEETS_SYNC_SECRET");
@@ -76,4 +82,19 @@ async function validatePdfSignature(fileUrl) {
   const bytes = new Uint8Array(await response.arrayBuffer());
   const prefix = new TextDecoder("latin1").decode(bytes.slice(0, 1024));
   if (!prefix.includes("%PDF-")) throw new Error("The uploaded file does not contain a valid PDF header.");
+}
+
+async function extractAuthorsWithoutBlockingSubmission(fileUrl) {
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error("PDF download failed.");
+    return await extractPdfAuthorMetadata(new Uint8Array(await response.arrayBuffer()));
+  } catch (error) {
+    console.error("PDF author extraction failed:", error);
+    return {
+      authorList: "",
+      correspondingAuthors: "",
+      extractionStatus: "Needs review: automatic PDF text extraction failed.",
+    };
+  }
 }

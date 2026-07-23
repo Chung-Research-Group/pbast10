@@ -12,9 +12,20 @@ globalThis.Netlify = { env: { get: (key) => env.get(key) } };
 
 let forwarded = null;
 let pdfPrefix = "%PDF-1.7\n";
+const pdfBytes = makeTestPdf([
+  "PBAST10",
+  "A reproducible adsorption study",
+  "Lovelace, Ada 1*; Babbage, Charles 2; Hopper, Grace 1",
+  "1 Department of Computing, Example University, Seoul, Republic of Korea",
+  "2 Institute of Engines, Example Academy, London, United Kingdom",
+  "* Corresponding author: ada@example.org",
+]);
 globalThis.fetch = async (url, options) => {
-  if (options?.headers?.range) {
-    return new Response(pdfPrefix, { status: 206 });
+  if (String(url).endsWith(".pdf")) {
+    if (options?.headers?.range) {
+      return new Response(pdfPrefix.startsWith("%PDF-") ? pdfBytes.slice(0, 1024) : pdfPrefix, { status: 206 });
+    }
+    return new Response(pdfPrefix.startsWith("%PDF-") ? pdfBytes : pdfPrefix, { status: 200 });
   }
   forwarded = { url, options, body: JSON.parse(options.body) };
   return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true }) };
@@ -32,7 +43,6 @@ const sampleData = {
   "presentation-preference": "Oral",
   "primary-topic": "Molecular simulation and machine learning",
   "abstract-title": "A reproducible adsorption study",
-  "co-authors": "=HYPERLINK(\"https://example.invalid\",\"Babbage, Charles\")",
   "abstract-file": [{
     filename: "abstract.pdf",
     type: "file",
@@ -46,6 +56,9 @@ await netlifyHandler.formSubmitted({ data: sampleData });
 assert.equal(forwarded.url, "https://example.test/exec");
 assert.equal(forwarded.body.action, "create");
 assert.equal(forwarded.body.submissionId, "test-submission-1");
+assert.equal(forwarded.body.data["pdf-author-list"], "Lovelace, Ada; Babbage, Charles; Hopper, Grace");
+assert.equal(forwarded.body.data["pdf-corresponding-authors"], "Lovelace, Ada — ada@example.org");
+assert.equal(forwarded.body.data["author-extraction-status"], "Extracted — verify against PDF");
 
 forwarded = null;
 const sampleWithoutFormName = { ...sampleData };
@@ -207,7 +220,7 @@ class MockSheet {
 const tracker = new MockSheet("Abstract Tracker", [[
   "Submission ID", "Submitted At", "Last Name", "First Name", "Full Name",
   "Email", "Institution / Affiliation", "Country / Region",
-  "Presentation Preference", "Primary Topic", "Abstract Title", "Co-authors",
+  "Presentation Preference", "Primary Topic", "Abstract Title", "Author List (from PDF)",
   "Abstract File URL", "Consent", "Intake Status", "Reviewer 1",
   "Reviewer 1 Decision", "Reviewer 2", "Reviewer 2 Decision", "Final Decision",
   "Final Presentation Type", "Notification Status", "Notes",
@@ -255,6 +268,7 @@ const context = {
     }),
     newConditionalFormatRule: () => ({
       whenTextEqualTo(value) { this.value = value; return this; },
+      whenTextContains(value) { this.value = value; return this; },
       setBackground(color) { this.color = color; return this; },
       setRanges(ranges) { this.ranges = ranges; return this; },
       build() {
@@ -296,7 +310,7 @@ assert.ok(lists, "initializer must create the validation Lists sheet");
 assert.equal(lists.hidden, true, "validation Lists sheet must be hidden");
 assert.equal(lists.rows[2][2], "Accept");
 assert.equal(tracker.validations.length, 6, "tracker must receive six committee workflow dropdowns");
-assert.equal(tracker.conditionalRules.length, 4, "tracker must receive four workflow status color rules");
+assert.equal(tracker.conditionalRules.length, 6, "tracker must receive workflow and extraction status color rules");
 const summary = sheets.get("Summary");
 assert.ok(summary, "initializer must create the Summary sheet");
 assert.equal(summary.rows[0][0], "PBAST10 Abstract Submission Summary");
@@ -315,13 +329,20 @@ const createResult = callAppsScript({
   action: "create",
   submissionId: "test-submission-1",
   submittedAt: "2026-07-17T01:02:03.000Z",
-  data: sampleData,
+  data: {
+    ...sampleData,
+    "pdf-author-list": "=HYPERLINK(\"https://example.invalid\",\"Lovelace, Ada\")",
+    "pdf-corresponding-authors": "=ada@example.org",
+    "author-extraction-status": "Extracted — verify against PDF",
+  },
 });
 assert.equal(createResult.ok, true);
 assert.equal(tracker.rows.length, 2);
-assert.equal(tracker.rows[1].length, 29);
+assert.equal(tracker.rows[1].length, 31);
 assert.equal(tracker.rows[1][4], "Lovelace, Ada");
 assert.equal(tracker.rows[1][11].startsWith("'="), true, "formula-like text must be escaped before writing to Sheets");
+assert.equal(tracker.rows[1][29].startsWith("'="), true, "corresponding-author text must be escaped before writing to Sheets");
+assert.equal(tracker.rows[1][30], "Extracted — verify against PDF");
 assert.equal(tracker.rows[1][21], "Not sent", "decision notification status must remain untouched");
 assert.equal(tracker.rows[1][24], 0);
 assert.equal(tracker.rows[1][27], "Confirmation sent");
@@ -345,6 +366,9 @@ const revisedData = {
   ...sampleData,
   email: "ada.new@example.org",
   "abstract-title": "A revised adsorption study",
+  "pdf-author-list": "Lovelace, Ada; Hopper, Grace",
+  "pdf-corresponding-authors": "Lovelace, Ada — ada.new@example.org",
+  "author-extraction-status": "Extracted — verify against PDF",
   "abstract-file": JSON.stringify([{
     filename: "revised.pdf",
     size: 2048,
@@ -362,6 +386,8 @@ assert.equal(revisionResult.ok, true);
 assert.equal(revisionResult.revisionCount, 1);
 assert.equal(tracker.rows[1][10], "A revised adsorption study");
 assert.equal(tracker.rows[1][12], "https://example.test/revised.pdf");
+assert.equal(tracker.rows[1][29], "Lovelace, Ada — ada.new@example.org");
+assert.equal(tracker.rows[1][30], "Extracted — verify against PDF");
 assert.equal(tracker.rows[1][24], 1);
 assert.equal(tracker.rows[1][26], "revision-event-1");
 assert.equal(tracker.rows[1][27], "Revision confirmation sent");
@@ -378,6 +404,7 @@ assert.equal(history.rows[1][2], 0);
 assert.equal(history.rows[2][2], 1);
 assert.equal(history.rows[2][1], "revision-event-1", "history must retain the Netlify revision event ID");
 assert.equal(history.rows[1][14].startsWith("'="), true, "history rows must also escape formula-like text");
+assert.equal(history.rows[2][17], "Lovelace, Ada — ada.new@example.org");
 
 const duplicate = callAppsScript({
   action: "revise",
@@ -389,3 +416,32 @@ assert.equal(duplicate.duplicate, true);
 assert.equal(history.rows.length, 3, "retry must not append another history row");
 
 console.log("Abstract confirmation and revision tests passed.");
+
+function makeTestPdf(lines) {
+  const escapedLines = lines.map((line) => line.replace(/([\\()])/g, "\\$1"));
+  const textCommands = escapedLines
+    .map((line, index) => `${index ? "0 -18 Td " : ""}(${line}) Tj`)
+    .join("\n");
+  const stream = `BT\n/F1 11 Tf\n72 760 Td\n${textCommands}\nET\n`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let pdf = "%PDF-1.7\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xrefOffset = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return new TextEncoder().encode(pdf);
+}

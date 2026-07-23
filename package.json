@@ -1,0 +1,14 @@
+{
+  "name": "pbast10-conference-site",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "pdfjs-dist": "5.4.296"
+  },
+  "scripts": {
+    "test": "node scripts/test_pdf_author_extraction.mjs && node scripts/test_sheets_sync.mjs && python scripts/check_site.py"
+  }
+}

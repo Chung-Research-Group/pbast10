@@ -18,12 +18,13 @@ var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
 var TRACKER_HEADERS = [
   'Submission ID', 'Submitted At', 'Last Name', 'First Name', 'Full Name',
   'Email', 'Institution / Affiliation', 'Country / Region',
-  'Presentation Preference', 'Primary Topic', 'Abstract Title', 'Co-authors',
+  'Presentation Preference', 'Primary Topic', 'Abstract Title', 'Author List (from PDF)',
   'Abstract File URL', 'Consent', 'Intake Status', 'Reviewer 1',
   'Reviewer 1 Decision', 'Reviewer 2', 'Reviewer 2 Decision', 'Final Decision',
   'Final Presentation Type', 'Notification Status', 'Notes', 'Edit Token Hash',
   'Revision Count', 'Last Revised At', 'Last Revision Event ID',
-  'Confirmation Email Status', 'Confirmation Email Sent At'
+  'Confirmation Email Status', 'Confirmation Email Sent At',
+  'Corresponding Author(s) (from PDF)', 'Author Extraction Status'
 ];
 
 var COL = {
@@ -38,7 +39,7 @@ var COL = {
   PRESENTATION: 9,
   TOPIC: 10,
   TITLE: 11,
-  COAUTHORS: 12,
+  AUTHORS: 12,
   FILE_URL: 13,
   CONSENT: 14,
   INTAKE_STATUS: 15,
@@ -48,7 +49,9 @@ var COL = {
   LAST_REVISED_AT: 26,
   LAST_REVISION_EVENT_ID: 27,
   CONFIRMATION_STATUS: 28,
-  CONFIRMATION_SENT_AT: 29
+  CONFIRMATION_SENT_AT: 29,
+  CORRESPONDING_AUTHORS: 30,
+  AUTHOR_EXTRACTION_STATUS: 31
 };
 
 function doPost(e) {
@@ -185,7 +188,7 @@ function createSubmission_(spreadsheet, sheet, payload, properties) {
     sheetText_(data['presentation-preference']),
     sheetText_(data['primary-topic']),
     sheetText_(data['abstract-title']),
-    sheetText_(data['co-authors']),
+    sheetText_(data['pdf-author-list']),
     fileUrl_(data['abstract-file']),
     sheetText_(data.consent),
     'New',
@@ -199,7 +202,9 @@ function createSubmission_(spreadsheet, sheet, payload, properties) {
     '',
     '',
     'Not sent',
-    ''
+    '',
+    sheetText_(data['pdf-corresponding-authors']),
+    sheetText_(data['author-extraction-status'])
   ];
 
   sheet.appendRow(row);
@@ -230,7 +235,7 @@ function getSubmission_(sheet, payload, properties) {
   var rowNumber = findRowByValue_(sheet, COL.TOKEN_HASH, hashToken_(token));
   if (!rowNumber) return jsonResponse_({ ok: false, code: 'INVALID_LINK', error: 'This revision link is invalid or has expired.' });
 
-  var row = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  var row = sheet.getRange(rowNumber, 1, 1, TRACKER_HEADERS.length).getValues()[0];
   return jsonResponse_({
     ok: true,
     submission: editableDataFromRow_(row),
@@ -265,7 +270,7 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
   if (!rowNumber) return jsonResponse_({ ok: false, code: 'INVALID_LINK', error: 'This revision link is invalid or has expired.' });
 
   validateSubmissionData_(data);
-  var previous = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  var previous = sheet.getRange(rowNumber, 1, 1, TRACKER_HEADERS.length).getValues()[0];
   var previousEmail = clean_(previous[COL.EMAIL - 1]);
   var revisionNumber = Number(previous[COL.REVISION_COUNT - 1] || 0) + 1;
   var revisedAt = payload.submittedAt ? new Date(payload.submittedAt) : new Date();
@@ -283,18 +288,20 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
     sheetText_(data['presentation-preference']),
     sheetText_(data['primary-topic']),
     sheetText_(data['abstract-title']),
-    sheetText_(data['co-authors']),
+    sheetText_(data['pdf-author-list']),
     fileUrl_(data['abstract-file']),
     sheetText_(data.consent)
   ];
   sheet.getRange(rowNumber, COL.LAST_NAME, 1, updates.length).setValues([updates]);
+  sheet.getRange(rowNumber, COL.CORRESPONDING_AUTHORS).setValue(sheetText_(data['pdf-corresponding-authors']));
+  sheet.getRange(rowNumber, COL.AUTHOR_EXTRACTION_STATUS).setValue(sheetText_(data['author-extraction-status']));
   sheet.getRange(rowNumber, COL.TOKEN_HASH).setValue(hashToken_(nextToken));
   sheet.getRange(rowNumber, COL.REVISION_COUNT).setValue(revisionNumber);
   sheet.getRange(rowNumber, COL.LAST_REVISED_AT).setValue(revisedAt);
   sheet.getRange(rowNumber, COL.LAST_REVISION_EVENT_ID).setValue(eventId);
   sheet.getRange(rowNumber, COL.CONFIRMATION_STATUS).setValue('Revision confirmation pending');
 
-  var current = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  var current = sheet.getRange(rowNumber, 1, 1, TRACKER_HEADERS.length).getValues()[0];
   appendHistory_(spreadsheet, current, eventId, revisionNumber, revisedAt, 'Revision');
 
   try {
@@ -318,7 +325,7 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
 function issueTokenAndSend_(sheet, rowNumber, properties, isRevision) {
   var token = createToken_();
   sheet.getRange(rowNumber, COL.TOKEN_HASH).setValue(hashToken_(token));
-  var row = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  var row = sheet.getRange(rowNumber, 1, 1, TRACKER_HEADERS.length).getValues()[0];
   sendConfirmationEmail_(row, token, properties, isRevision);
   sheet.getRange(rowNumber, COL.CONFIRMATION_STATUS).setValue(isRevision ? 'Revision confirmation sent' : 'Confirmation sent');
   sheet.getRange(rowNumber, COL.CONFIRMATION_SENT_AT).setValue(new Date());
@@ -411,9 +418,11 @@ function appendHistory_(spreadsheet, trackerRow, eventId, revisionNumber, record
     sheetText_(trackerRow[COL.PRESENTATION - 1]),
     sheetText_(trackerRow[COL.TOPIC - 1]),
     sheetText_(trackerRow[COL.TITLE - 1]),
-    sheetText_(trackerRow[COL.COAUTHORS - 1]),
+    sheetText_(trackerRow[COL.AUTHORS - 1]),
     clean_(trackerRow[COL.FILE_URL - 1]),
-    sheetText_(trackerRow[COL.CONSENT - 1])
+    sheetText_(trackerRow[COL.CONSENT - 1]),
+    sheetText_(trackerRow[COL.CORRESPONDING_AUTHORS - 1]),
+    sheetText_(trackerRow[COL.AUTHOR_EXTRACTION_STATUS - 1])
   ]);
 }
 
@@ -452,13 +461,13 @@ function ensureTrackerSheet_(sheet, spreadsheet) {
   var widths = [
     190, 145, 105, 105, 145, 190, 210, 145, 145, 220,
     260, 220, 300, 90, 115, 150, 150, 150, 150, 130,
-    150, 140, 240, 120, 100, 145, 150, 160, 170
+    150, 140, 240, 120, 100, 145, 150, 160, 170, 260, 240
   ];
   for (var i = 0; i < widths.length; i++) sheet.setColumnWidth(i + 1, widths[i]);
 
   var existingFilter = sheet.getFilter();
   if (existingFilter) existingFilter.remove();
-  sheet.getRange(1, 1, TRACKER_MAX_ROWS, COL.NOTES).createFilter();
+  sheet.getRange(1, 1, TRACKER_MAX_ROWS, TRACKER_HEADERS.length).createFilter();
 
   var lists = spreadsheet.getSheetByName(LISTS_SHEET);
   var validationBuilder = SpreadsheetApp.newDataValidation().setAllowInvalid(false);
@@ -479,7 +488,8 @@ function ensureTrackerSheet_(sheet, spreadsheet) {
     var ranges = rule.getRanges();
     for (var r = 0; r < ranges.length; r++) {
       var column = ranges[r].getColumn();
-      if (column === COL.INTAKE_STATUS || column === 20 || column === 22) return false;
+      if (column === COL.INTAKE_STATUS || column === 20 || column === 22 ||
+          column === COL.AUTHOR_EXTRACTION_STATUS) return false;
     }
     return true;
   });
@@ -503,6 +513,16 @@ function ensureTrackerSheet_(sheet, spreadsheet) {
       .whenTextEqualTo('Sent')
       .setBackground('#cfe2f3')
       .setRanges([sheet.getRange('V2:V' + TRACKER_MAX_ROWS)])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextContains('Needs review')
+      .setBackground('#fff2cc')
+      .setRanges([sheet.getRange('AE2:AE' + TRACKER_MAX_ROWS)])
+      .build(),
+    SpreadsheetApp.newConditionalFormatRule()
+      .whenTextEqualTo('Extracted — verify against PDF')
+      .setBackground('#d9ead3')
+      .setRanges([sheet.getRange('AE2:AE' + TRACKER_MAX_ROWS)])
       .build()
   );
   sheet.setConditionalFormatRules(rules);
@@ -534,14 +554,17 @@ function ensureListsSheet_(spreadsheet) {
 function ensureHistoryHeaders_(spreadsheet) {
   var history = spreadsheet.getSheetByName(HISTORY_SHEET);
   if (!history) history = spreadsheet.insertSheet(HISTORY_SHEET);
-  if (history.getLastRow() === 0) {
-    history.appendRow([
-      'Submission ID', 'Event ID', 'Revision Number', 'Recorded At', 'Event Type',
-      'Last Name', 'First Name', 'Full Name', 'Email', 'Institution / Affiliation',
-      'Country / Region', 'Presentation Preference', 'Primary Topic', 'Abstract Title',
-      'Co-authors', 'Abstract File URL', 'Consent'
-    ]);
+  var headers = [
+    'Submission ID', 'Event ID', 'Revision Number', 'Recorded At', 'Event Type',
+    'Last Name', 'First Name', 'Full Name', 'Email', 'Institution / Affiliation',
+    'Country / Region', 'Presentation Preference', 'Primary Topic', 'Abstract Title',
+    'Author List (from PDF)', 'Abstract File URL', 'Consent',
+    'Corresponding Author(s) (from PDF)', 'Author Extraction Status'
+  ];
+  if (history.getMaxColumns() < headers.length) {
+    history.insertColumnsAfter(history.getMaxColumns(), headers.length - history.getMaxColumns());
   }
+  history.getRange(1, 1, 1, headers.length).setValues([headers]);
   history.setFrozenRows(1);
   return history;
 }
@@ -609,7 +632,6 @@ function editableDataFromRow_(row) {
     presentationPreference: clean_(row[COL.PRESENTATION - 1]),
     primaryTopic: clean_(row[COL.TOPIC - 1]),
     abstractTitle: clean_(row[COL.TITLE - 1]),
-    coAuthors: clean_(row[COL.COAUTHORS - 1]),
     currentFileUrl: clean_(row[COL.FILE_URL - 1])
   };
 }
