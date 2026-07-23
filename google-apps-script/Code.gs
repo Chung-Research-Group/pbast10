@@ -82,6 +82,8 @@ function doPost(e) {
     ensureTrackerHeaders_(sheet);
     var action = clean_(payload.action) || 'create';
 
+    if (action === 'admin-list') return adminList_(sheet);
+    if (action === 'admin-update') return adminUpdate_(sheet, payload);
     if (action === 'get') return getSubmission_(sheet, payload, properties);
     if (action === 'withdraw') return withdrawSubmission_(spreadsheet, sheet, payload, properties);
     if (action === 'revise') return reviseSubmission_(spreadsheet, sheet, payload, properties);
