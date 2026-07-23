@@ -80,6 +80,11 @@ After later code changes, saving alone does not update the live endpoint. Use
 **Deploy -> Manage deployments -> Edit -> New version -> Deploy**. The `/exec`
 URL then remains unchanged.
 
+The confirmation email is sent only by this Apps Script deployment. Changes to
+the email subject, plain-text body, or HTML body therefore require a new Apps
+Script deployment version, but do not require a Netlify redeploy, environment
+variable change, Cloudflare DNS change, or Squarespace change.
+
 ## 4. Connect Netlify
 
 In **Netlify -> Project configuration -> Environment variables**, set:
@@ -104,11 +109,13 @@ Use a disposable test submission and verify all of the following:
 3. The submitter receives the confirmation email.
 4. The message header shows the Workspace account as the sender and
    `secretariat@pbast10.org` as Reply-To.
-5. The private revision link loads the submitted data.
-6. A revised PDF updates the tracker and appends one row to `Revision History`.
-7. The old revision token no longer works.
-8. Replaying the same controlled event does not create a duplicate row.
-9. Delivery succeeds to Gmail, Outlook, and an institutional mailbox.
+5. The subject does not contain the private submission UUID, and the message
+   includes both a plain-text body and a minimal HTML body.
+6. The private revision link loads the submitted data.
+7. A revised PDF updates the tracker and appends one row to `Revision History`.
+8. The old revision token no longer works.
+9. Replaying the same controlled event does not create a duplicate row.
+10. Delivery succeeds to Gmail, Outlook, and an institutional mailbox.
 
 The official transactional path is:
 

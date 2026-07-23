@@ -337,8 +337,8 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
   var editUrl = siteUrl + '/revise-abstract.html#token=' + encodeURIComponent(token);
   var deadline = Utilities.formatDate(revisionDeadline_(properties), 'Asia/Seoul', 'MMMM d, yyyy, h:mm a z');
   var subject = isRevision
-    ? '[PBAST10] Abstract revision confirmed — ' + submissionId
-    : '[PBAST10] Abstract submission confirmed — ' + submissionId;
+    ? 'PBAST10 Abstract Revision Confirmation'
+    : 'PBAST10 Abstract Submission Confirmation';
   var intro = isRevision
     ? 'Your revised abstract has been received successfully.'
     : 'Your abstract has been received successfully.';
@@ -355,19 +355,22 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     '',
     'Keep this private link secure. It provides access to your submission.',
     '',
-    'PBAST10 Organizing Committee'
+    'PBAST10 Organizing Committee',
+    siteUrl,
+    'Contact: ' + (properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT)
   ].join('\n');
   var htmlBody = '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#12233a;max-width:640px">' +
     '<h2 style="color:#003876">PBAST10 Abstract ' + (isRevision ? 'Revision' : 'Submission') + ' Confirmation</h2>' +
     '<p>Dear ' + html_(name || 'Participant') + ',</p>' +
     '<p>' + html_(intro) + '</p>' +
-    '<table style="border-collapse:collapse;width:100%;margin:20px 0">' +
-      '<tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Submission ID</th><td style="padding:8px;border-bottom:1px solid #ddd">' + html_(submissionId) + '</td></tr>' +
-      '<tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Abstract title</th><td style="padding:8px;border-bottom:1px solid #ddd">' + html_(title) + '</td></tr>' +
-    '</table>' +
-    '<p><a href="' + html_(editUrl) + '" style="display:inline-block;background:#003876;color:#fff;text-decoration:none;padding:12px 20px">Review or Revise Your Abstract</a></p>' +
+    '<p><strong>Abstract title:</strong> ' + html_(title) + '<br>' +
+    '<strong>Submission ID:</strong> ' + html_(submissionId) + '</p>' +
+    '<p><a href="' + html_(editUrl) + '">Review or revise your abstract</a></p>' +
     '<p style="font-size:13px;color:#6b6355">Revisions close on ' + html_(deadline) + '. Keep this private link secure because it provides access to your submission.</p>' +
-    '<p>PBAST10 Organizing Committee</p></div>';
+    '<p>PBAST10 Organizing Committee<br>' +
+    '<a href="' + html_(siteUrl) + '">' + html_(siteUrl) + '</a><br>' +
+    'Contact: <a href="mailto:' + html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '">' +
+    html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '</a></p></div>';
 
   MailApp.sendEmail({
     to: recipient,
@@ -384,7 +387,7 @@ function sendEmailChangedNotice_(oldEmail, row, properties) {
   var submissionId = clean_(row[COL.SUBMISSION_ID - 1]);
   MailApp.sendEmail({
     to: oldEmail,
-    subject: '[PBAST10] Submission email address changed — ' + submissionId,
+    subject: 'PBAST10 Submission Email Address Changed',
     body: 'The contact email address for PBAST10 abstract ' + submissionId + ' was changed during a revision. If you did not make this change, reply to this email immediately.\n\nPBAST10 Organizing Committee',
     name: 'PBAST10 Organizing Committee',
     replyTo: properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT
