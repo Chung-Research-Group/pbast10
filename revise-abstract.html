@@ -37,8 +37,8 @@
 <main id="main-content">
 <div class="page">
   <p class="kicker">Abstract Submission</p>
-  <h1 class="page-title">Review or Revise Your Abstract</h1>
-  <p class="lead" style="max-width:760px">Use the private link in your confirmation email to review your current submission and upload a revised abstract by November 30, 2026, 11:59 PM KST.</p>
+  <h1 class="page-title">Review, Revise, or Withdraw Your Abstract</h1>
+  <p class="lead" style="max-width:760px">Use the private link in your confirmation email to review, revise, or withdraw your submission by November 30, 2026, 11:59 PM KST.</p>
 
   <div id="revision-loading" class="status-box" role="status">
     <h2 class="section-title">Loading your submission</h2>
@@ -80,6 +80,20 @@
         <div class="form-field full"><button id="revision-submit" class="btn btn-primary" type="submit">Submit Revised Abstract</button></div>
       </div>
     </form>
+
+    <div id="withdrawal-panel" class="status-box" style="max-width:860px;margin-top:40px;border-color:#b42318" hidden>
+      <h2 class="section-title">Withdraw This Submission</h2>
+      <p class="prose">Withdrawal removes this abstract from review but keeps an administrative record. It does not delete the uploaded file.</p>
+      <label class="checkbox-field"><input id="withdrawal-confirm" type="checkbox"><span>I understand that this submission will not be reviewed unless the secretariat reinstates it.</span></label>
+      <p style="margin-top:18px"><button id="withdrawal-submit" class="btn" type="button" style="background:#b42318;color:#fff" disabled>Confirm Withdrawal</button></p>
+      <p id="withdrawal-error" class="note" role="alert" hidden></p>
+    </div>
+
+    <div id="withdrawal-complete" class="status-box" style="max-width:860px;border-color:#b42318" hidden>
+      <h2 class="section-title">Submission Withdrawn</h2>
+      <p class="prose">This abstract has been withdrawn and will not be sent for review.</p>
+      <p class="note">To request reinstatement, contact <a href="mailto:secretariat@pbast10.org">secretariat@pbast10.org</a> and include your submission ID.</p>
+    </div>
   </section>
 </div>
 </main>
