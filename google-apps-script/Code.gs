@@ -84,6 +84,7 @@ function doPost(e) {
 
     if (action === 'admin-list') return adminList_(sheet);
     if (action === 'admin-update') return adminUpdate_(sheet, payload);
+    if (action === 'admin-reviewer-invite') return adminReviewerInvite_(payload, properties);
     if (action === 'get') return getSubmission_(sheet, payload, properties);
     if (action === 'withdraw') return withdrawSubmission_(spreadsheet, sheet, payload, properties);
     if (action === 'revise') return reviseSubmission_(spreadsheet, sheet, payload, properties);

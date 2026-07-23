@@ -29,20 +29,32 @@ export function makeHandler({
   }
 
   const action = body.action;
-  if (!["list", "update"].includes(action)) {
+  if (!["list", "update", "reviewer-invite"].includes(action)) {
     return json({ ok: false, error: "Unsupported action." }, 400);
   }
 
-  const forwarded =
-    action === "list"
-      ? { secret: syncSecret, action: "admin-list" }
-      : {
-          secret: syncSecret,
-          action: "admin-update",
-          submissionId: body.submissionId,
-          expectedFingerprint: body.expectedFingerprint,
-          changes: body.changes,
-        };
+  let forwarded;
+  if (action === "list") {
+    forwarded = { secret: syncSecret, action: "admin-list" };
+  } else if (action === "update") {
+    forwarded = {
+      secret: syncSecret,
+      action: "admin-update",
+      submissionId: body.submissionId,
+      expectedFingerprint: body.expectedFingerprint,
+      changes: body.changes,
+    };
+  } else {
+    forwarded = {
+      secret: syncSecret,
+      action: "admin-reviewer-invite",
+      email: body.email,
+      name: body.name,
+      temporaryPasscode: body.temporaryPasscode,
+      loginUrl: body.loginUrl,
+      deadline: body.deadline,
+    };
+  }
 
   try {
     const response = await fetch(webhookUrl, {

@@ -203,3 +203,102 @@ function adminIso_(value) {
   if (value instanceof Date && !isNaN(value.getTime())) return value.toISOString();
   return clean_(value);
 }
+
+
+/**
+ * Sends one reviewer an individual temporary passcode and login instructions.
+ * The caller has already passed the shared-secret check in Code.gs.
+ */
+function adminReviewerInvite_(payload, properties) {
+  var email = clean_(payload.email).toLowerCase();
+  var name = clean_(payload.name);
+  var temporaryPasscode = clean_(payload.temporaryPasscode);
+  var loginUrl = clean_(payload.loginUrl);
+  var deadline = clean_(payload.deadline);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('A valid reviewer email is required.');
+  }
+  if (!name || name.length > 200) {
+    throw new Error('A valid reviewer name is required.');
+  }
+  if (!/^[A-Za-z0-9-]{12,32}$/.test(temporaryPasscode)) {
+    throw new Error('The temporary reviewer passcode is invalid.');
+  }
+  if (
+    loginUrl !==
+    'https://pbast10-admin.drygchung.chatgpt.site/reviewer/login'
+  ) {
+    throw new Error('The reviewer login URL is invalid.');
+  }
+  if (deadline.length > 80) {
+    throw new Error('The review deadline is invalid.');
+  }
+
+  var deadlineText = deadline
+    ? Utilities.formatDate(
+        new Date(deadline),
+        'Asia/Seoul',
+        'MMMM d, yyyy, HH:mm'
+      ) + ' KST'
+    : 'Shown in the reviewer portal';
+  var subject = '[PBAST10] Abstract review login details';
+  var text = [
+    'Dear ' + name + ',',
+    '',
+    'Thank you for serving as a reviewer for PBAST10.',
+    '',
+    'Reviewer portal: ' + loginUrl,
+    'Login email: ' + email,
+    'Temporary passcode: ' + temporaryPasscode,
+    'Review deadline: ' + deadlineText,
+    '',
+    'For security, the portal will ask you to replace the temporary passcode after your first sign-in. Please do not forward this email.',
+    '',
+    'PBAST10 Secretariat'
+  ].join('\n');
+  var html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:auto;color:#172535;line-height:1.6">' +
+    '<div style="border-top:6px solid #003876;padding:28px;border:1px solid #dfe6ec">' +
+    '<p>Dear ' + adminEscapeHtml_(name) + ',</p>' +
+    '<p>Thank you for serving as a reviewer for PBAST10. Your individual login details are below.</p>' +
+    '<table style="width:100%;border-collapse:collapse;margin:22px 0;background:#f4f7f9">' +
+    adminInviteRow_('Reviewer portal', '<a href="' + adminEscapeHtml_(loginUrl) + '">' + adminEscapeHtml_(loginUrl) + '</a>') +
+    adminInviteRow_('Login email', adminEscapeHtml_(email)) +
+    adminInviteRow_('Temporary passcode', '<span style="font-family:monospace;font-size:16px;letter-spacing:.04em">' + adminEscapeHtml_(temporaryPasscode) + '</span>') +
+    adminInviteRow_('Review deadline', adminEscapeHtml_(deadlineText)) +
+    '</table>' +
+    '<p>For security, the portal will ask you to replace the temporary passcode after your first sign-in. Please do not forward this email.</p>' +
+    '<p style="margin-top:28px">PBAST10 Secretariat</p>' +
+    '</div></div>';
+
+  MailApp.sendEmail({
+    to: email,
+    subject: subject,
+    body: text,
+    htmlBody: html,
+    name: 'PBAST10 Secretariat',
+    replyTo:
+      properties.getProperty('REPLY_TO_EMAIL') ||
+      'secretariat@pbast10.org'
+  });
+  return jsonResponse_({ ok: true, sentAt: new Date().toISOString() });
+}
+
+function adminInviteRow_(label, value) {
+  return (
+    '<tr><td style="padding:10px 14px;font-weight:bold">' +
+    adminEscapeHtml_(label) +
+    '</td><td style="padding:10px 14px">' +
+    value +
+    '</td></tr>'
+  );
+}
+
+function adminEscapeHtml_(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
