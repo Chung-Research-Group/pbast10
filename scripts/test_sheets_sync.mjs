@@ -338,7 +338,7 @@ assert.equal(sentEmails.length, 1);
 assert.equal(sentEmails[0].to, "ada@example.org");
 assert.equal(sentEmails[0].subject, "[PBAST10] Abstract submission confirmed — test-submission-1");
 assert.equal(sentEmails[0].replyTo, "secretariat@pbast10.org");
-assert.match(sentEmails[0].htmlBody, /Review or Revise Your Abstract/);
+assert.match(sentEmails[0].htmlBody, /Review, Revise, or Withdraw Your Abstract/);
 assert.match(sentEmails[0].htmlBody, /background:#003876/);
 assert.equal((sentEmails[0].htmlBody.match(/href=/g) || []).length, 1, "confirmation HTML must contain exactly one link");
 
@@ -401,6 +401,14 @@ const repeatedWithdrawal = callAppsScript({ action: "withdraw", token: revisedTo
 assert.equal(repeatedWithdrawal.ok, true);
 assert.equal(repeatedWithdrawal.duplicate, true);
 assert.equal(sentEmails.length, 4, "repeated withdrawal must not resend confirmation");
+
+const revisionAfterWithdrawal = callAppsScript({
+  action: "revise",
+  eventId: "revision-event-after-withdrawal",
+  data: { ...revisedData, "edit-token": revisedToken },
+});
+assert.equal(revisionAfterWithdrawal.ok, false);
+assert.equal(revisionAfterWithdrawal.code, "SUBMISSION_WITHDRAWN");
 
 const history = sheets.get("Revision History");
 assert.equal(history.rows.length, 4, "history must contain a header, original, revision, and withdrawal");
