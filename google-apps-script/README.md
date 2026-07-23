@@ -19,13 +19,17 @@ while signed in as `secretariat@pbast10.org`.
 `initializePBAST10()` automatically:
 
 - creates `PBAST10 Abstract Submission Tracker` in the Workspace account;
-- creates and formats `Abstract Tracker` and `Revision History`;
+- creates and formats `Summary`, `Abstract Tracker`, and `Revision History`;
+- adds live counts for total, new, accepted, oral, poster, rejected, and
+  notifications sent;
 - generates a new random `SYNC_SECRET`;
 - sets the official reply address to `secretariat@pbast10.org`;
 - sets the site URL and revision deadline defaults.
 
 It is safe to run the initializer again. It reuses the configured spreadsheet
-and secret and does not delete submissions.
+and secret and does not delete submissions. Re-running it also creates or
+refreshes the `Summary` tab, so an existing installation can add the dashboard
+without rebuilding the tracker.
 
 Open **Execution log** after the run and save these two outputs temporarily:
 

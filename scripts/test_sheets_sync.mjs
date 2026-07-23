@@ -127,6 +127,17 @@ class MockRange {
     );
   }
   setValues(values) { this.sheet.write(this.startRow, this.startColumn, values); return this; }
+  breakApart() { return this; }
+  clearContent() { return this; }
+  merge() { return this; }
+  mergeAcross() { return this; }
+  setBackground() { return this; }
+  setFontSize() { return this; }
+  setFontWeight() { return this; }
+  setVerticalAlignment() { return this; }
+  setHorizontalAlignment() { return this; }
+  setBorder() { return this; }
+  setNumberFormat() { return this; }
   createTextFinder(needle) {
     const range = this;
     return {
@@ -155,6 +166,10 @@ class MockSheet {
   getRange(...args) { return new MockRange(this, ...args); }
   appendRow(row) { this.rows.push([...row]); }
   setFrozenRows() {}
+  setColumnWidth() {}
+  setColumnWidths() {}
+  setRowHeight() {}
+  setTabColor() {}
   valueAt(row, column) { return this.rows[row - 1]?.[column - 1] ?? ""; }
   write(row, column, values) {
     values.forEach((sourceRow, r) => {
@@ -238,6 +253,16 @@ assert.equal(setup.replyTo, "secretariat@pbast10.org");
 assert.equal(properties.get("SPREADSHEET_ID"), "new-workspace-sheet-id");
 assert.match(properties.get("SYNC_SECRET"), /^[a-f0-9]{96}$/);
 assert.deepEqual(tracker.rows[0], Array.from(context.TRACKER_HEADERS));
+const summary = sheets.get("Summary");
+assert.ok(summary, "initializer must create the Summary sheet");
+assert.equal(summary.rows[0][0], "PBAST10 Abstract Submission Summary");
+assert.equal(summary.rows[3][1], "=COUNTA('Abstract Tracker'!A2:A)");
+assert.equal(summary.rows[4][1], '=COUNTIF(\'Abstract Tracker\'!O2:O,"New")');
+assert.equal(summary.rows[5][1], '=COUNTIF(\'Abstract Tracker\'!T2:T,"Accepted")');
+assert.equal(summary.rows[6][1], '=COUNTIF(\'Abstract Tracker\'!U2:U,"Oral")');
+assert.equal(summary.rows[7][1], '=COUNTIF(\'Abstract Tracker\'!U2:U,"Poster")');
+assert.equal(summary.rows[8][1], '=COUNTIF(\'Abstract Tracker\'!T2:T,"Rejected")');
+assert.equal(summary.rows[9][1], '=COUNTIF(\'Abstract Tracker\'!V2:V,"Sent")');
 const originalSecret = properties.get("SYNC_SECRET");
 context.initializePBAST10();
 assert.equal(properties.get("SYNC_SECRET"), originalSecret, "rerunning setup must not rotate the shared secret");

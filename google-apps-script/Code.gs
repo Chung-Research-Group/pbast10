@@ -9,6 +9,7 @@
  */
 var TRACKER_SHEET = 'Abstract Tracker';
 var HISTORY_SHEET = 'Revision History';
+var SUMMARY_SHEET = 'Summary';
 var SITE_URL_DEFAULT = 'https://pbast10.org';
 var REPLY_TO_DEFAULT = 'secretariat@pbast10.org';
 var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
@@ -133,6 +134,7 @@ function initializePBAST10() {
   }
   ensureTrackerHeaders_(tracker);
   ensureHistoryHeaders_(spreadsheet);
+  ensureSummarySheet_(spreadsheet);
 
   var result = {
     spreadsheetUrl: spreadsheet.getUrl(),
@@ -432,6 +434,58 @@ function ensureHistoryHeaders_(spreadsheet) {
   }
   history.setFrozenRows(1);
   return history;
+}
+
+function ensureSummarySheet_(spreadsheet) {
+  var summary = spreadsheet.getSheetByName(SUMMARY_SHEET);
+  if (!summary) summary = spreadsheet.insertSheet(SUMMARY_SHEET, 0);
+
+  var trackerRef = "'" + TRACKER_SHEET.replace(/'/g, "''") + "'";
+  var rows = [
+    ['PBAST10 Abstract Submission Summary', '', '', ''],
+    ['', '', '', ''],
+    ['Metric', 'Count', '', ''],
+    ['Total submissions', '=COUNTA(' + trackerRef + '!A2:A)', '', ''],
+    ['New / unchecked', '=COUNTIF(' + trackerRef + '!O2:O,"New")', '', ''],
+    ['Accepted', '=COUNTIF(' + trackerRef + '!T2:T,"Accepted")', '', ''],
+    ['Oral', '=COUNTIF(' + trackerRef + '!U2:U,"Oral")', '', ''],
+    ['Poster', '=COUNTIF(' + trackerRef + '!U2:U,"Poster")', '', ''],
+    ['Rejected', '=COUNTIF(' + trackerRef + '!T2:T,"Rejected")', '', ''],
+    ['Notifications sent', '=COUNTIF(' + trackerRef + '!V2:V,"Sent")', '', ''],
+    ['', '', '', ''],
+    ['Workflow notes', '', '', ''],
+    [1, 'Netlify automatically appends verified submissions to Abstract Tracker.', '', ''],
+    [2, 'Committee members assign reviewers and record decisions in columns P–V.', '', ''],
+    [3, 'Keep Netlify as the source backup and archive files after the deadline.', '', '']
+  ];
+
+  summary.getRange(1, 1, rows.length, 4).breakApart().clearContent().setValues(rows);
+  summary.getRange('A1:D1').merge();
+  summary.getRange('A12:D12').merge();
+  summary.getRange('B13:D15').mergeAcross();
+
+  summary.getRange('A1:D1')
+    .setBackground('#d9e2f3')
+    .setFontSize(16)
+    .setFontWeight('bold')
+    .setVerticalAlignment('middle');
+  summary.getRange('A3:B3')
+    .setBackground('#e2e3e5')
+    .setFontWeight('bold');
+  summary.getRange('A12:D12')
+    .setBackground('#e2e3e5')
+    .setFontWeight('bold');
+  summary.getRange('A3:B10').setBorder(true, true, true, true, true, true);
+  summary.getRange('A13:D15').setBorder(true, true, true, true, true, true);
+  summary.getRange('B4:B10').setNumberFormat('0').setHorizontalAlignment('right');
+  summary.getRange('A1:D15').setVerticalAlignment('middle');
+  summary.setColumnWidth(1, 265);
+  summary.setColumnWidth(2, 520);
+  summary.setColumnWidths(3, 2, 120);
+  summary.setRowHeight(1, 44);
+  summary.setFrozenRows(1);
+  summary.setTabColor('#3c78d8');
+  return summary;
 }
 
 function editableDataFromRow_(row) {
