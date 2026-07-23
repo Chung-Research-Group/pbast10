@@ -136,8 +136,15 @@ class MockRange {
   setFontWeight() { return this; }
   setVerticalAlignment() { return this; }
   setHorizontalAlignment() { return this; }
+  setWrap() { return this; }
   setBorder() { return this; }
   setNumberFormat() { return this; }
+  setDataValidation(validation) { this.sheet.validations.push({ range: this, validation }); return this; }
+  createFilter() {
+    this.sheet.filter = { remove: () => { this.sheet.filter = null; } };
+    return this.sheet.filter;
+  }
+  getColumn() { return this.startColumn; }
   createTextFinder(needle) {
     const range = this;
     return {
@@ -158,18 +165,35 @@ class MockRange {
 }
 
 class MockSheet {
-  constructor(name, rows = []) { this.name = name; this.rows = rows; }
+  constructor(name, rows = []) {
+    this.name = name;
+    this.rows = rows;
+    this.maxRows = Math.max(200, rows.length);
+    this.validations = [];
+    this.conditionalRules = [];
+    this.filter = null;
+    this.hidden = false;
+  }
   setName(name) { this.name = name; return this; }
   getLastRow() { return this.rows.length; }
   getMaxColumns() { return Math.max(26, ...this.rows.map((row) => row.length)); }
+  getMaxRows() { return this.maxRows; }
   insertColumnsAfter() {}
+  insertRowsAfter(_after, count) { this.maxRows += count; }
   getRange(...args) { return new MockRange(this, ...args); }
   appendRow(row) { this.rows.push([...row]); }
   setFrozenRows() {}
+  setFrozenColumns() {}
   setColumnWidth() {}
   setColumnWidths() {}
   setRowHeight() {}
   setTabColor() {}
+  autoResizeColumns() {}
+  getFilter() { return this.filter; }
+  getConditionalFormatRules() { return this.conditionalRules; }
+  setConditionalFormatRules(rules) { this.conditionalRules = rules; }
+  isSheetHidden() { return this.hidden; }
+  hideSheet() { this.hidden = true; }
   valueAt(row, column) { return this.rows[row - 1]?.[column - 1] ?? ""; }
   write(row, column, values) {
     values.forEach((sourceRow, r) => {
@@ -224,6 +248,20 @@ const context = {
   SpreadsheetApp: {
     create: () => spreadsheet,
     openById: () => spreadsheet,
+    newDataValidation: () => ({
+      setAllowInvalid() { return this; },
+      requireValueInRange(range) { this.range = range; return this; },
+      build() { return { range: this.range }; },
+    }),
+    newConditionalFormatRule: () => ({
+      whenTextEqualTo(value) { this.value = value; return this; },
+      setBackground(color) { this.color = color; return this; },
+      setRanges(ranges) { this.ranges = ranges; return this; },
+      build() {
+        const ranges = this.ranges;
+        return { getRanges: () => ranges, value: this.value, color: this.color };
+      },
+    }),
   },
   Utilities: {
     getUuid: () => `00000000-0000-4000-8000-${String(++uuidCounter).padStart(12, "0")}`,
@@ -253,16 +291,22 @@ assert.equal(setup.replyTo, "secretariat@pbast10.org");
 assert.equal(properties.get("SPREADSHEET_ID"), "new-workspace-sheet-id");
 assert.match(properties.get("SYNC_SECRET"), /^[a-f0-9]{96}$/);
 assert.deepEqual(tracker.rows[0], Array.from(context.TRACKER_HEADERS));
+const lists = sheets.get("Lists");
+assert.ok(lists, "initializer must create the validation Lists sheet");
+assert.equal(lists.hidden, true, "validation Lists sheet must be hidden");
+assert.equal(lists.rows[2][2], "Accept");
+assert.equal(tracker.validations.length, 6, "tracker must receive six committee workflow dropdowns");
+assert.equal(tracker.conditionalRules.length, 4, "tracker must receive four workflow status color rules");
 const summary = sheets.get("Summary");
 assert.ok(summary, "initializer must create the Summary sheet");
 assert.equal(summary.rows[0][0], "PBAST10 Abstract Submission Summary");
-assert.equal(summary.rows[3][1], "=COUNTA('Abstract Tracker'!A2:A)");
-assert.equal(summary.rows[4][1], '=COUNTIF(\'Abstract Tracker\'!O2:O,"New")');
-assert.equal(summary.rows[5][1], '=COUNTIF(\'Abstract Tracker\'!T2:T,"Accepted")');
-assert.equal(summary.rows[6][1], '=COUNTIF(\'Abstract Tracker\'!U2:U,"Oral")');
-assert.equal(summary.rows[7][1], '=COUNTIF(\'Abstract Tracker\'!U2:U,"Poster")');
-assert.equal(summary.rows[8][1], '=COUNTIF(\'Abstract Tracker\'!T2:T,"Rejected")');
-assert.equal(summary.rows[9][1], '=COUNTIF(\'Abstract Tracker\'!V2:V,"Sent")');
+assert.equal(summary.rows[3][1], "=COUNTA('Abstract Tracker'!A2:A1000)");
+assert.equal(summary.rows[4][1], '=COUNTIF(\'Abstract Tracker\'!O2:O1000,"New")');
+assert.equal(summary.rows[5][1], '=COUNTIF(\'Abstract Tracker\'!T2:T1000,"Accept")');
+assert.equal(summary.rows[6][1], '=COUNTIF(\'Abstract Tracker\'!U2:U1000,"Oral")');
+assert.equal(summary.rows[7][1], '=COUNTIF(\'Abstract Tracker\'!U2:U1000,"Poster")');
+assert.equal(summary.rows[8][1], '=COUNTIF(\'Abstract Tracker\'!T2:T1000,"Reject")');
+assert.equal(summary.rows[9][1], '=COUNTIF(\'Abstract Tracker\'!V2:V1000,"Sent")+COUNTIF(\'Abstract Tracker\'!V2:V1000,"Confirmed")');
 const originalSecret = properties.get("SYNC_SECRET");
 context.initializePBAST10();
 assert.equal(properties.get("SYNC_SECRET"), originalSecret, "rerunning setup must not rotate the shared secret");
