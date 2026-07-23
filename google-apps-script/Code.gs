@@ -337,8 +337,8 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
   var editUrl = siteUrl + '/revise-abstract.html#token=' + encodeURIComponent(token);
   var deadline = Utilities.formatDate(revisionDeadline_(properties), 'Asia/Seoul', 'MMMM d, yyyy, h:mm a z');
   var subject = isRevision
-    ? 'PBAST10 Abstract Revision Confirmation'
-    : 'PBAST10 Abstract Submission Confirmation';
+    ? '[PBAST10] Abstract revision confirmed — ' + submissionId
+    : '[PBAST10] Abstract submission confirmed — ' + submissionId;
   var intro = isRevision
     ? 'Your revised abstract has been received successfully.'
     : 'Your abstract has been received successfully.';
@@ -356,7 +356,6 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     'Keep this private link secure. It provides access to your submission.',
     '',
     'PBAST10 Organizing Committee',
-    siteUrl,
     'Contact: ' + (properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT)
   ].join('\n');
   var htmlBody = '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#12233a;max-width:640px">' +
@@ -365,12 +364,12 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     '<p>' + html_(intro) + '</p>' +
     '<p><strong>Abstract title:</strong> ' + html_(title) + '<br>' +
     '<strong>Submission ID:</strong> ' + html_(submissionId) + '</p>' +
-    '<p><a href="' + html_(editUrl) + '">Review or revise your abstract</a></p>' +
+    '<p style="margin:28px 0"><a href="' + html_(editUrl) + '" ' +
+    'style="background:#003876;color:#ffffff;text-decoration:none;padding:14px 22px;' +
+    'display:inline-block;font-weight:bold">Review or Revise Your Abstract</a></p>' +
     '<p style="font-size:13px;color:#6b6355">Revisions close on ' + html_(deadline) + '. Keep this private link secure because it provides access to your submission.</p>' +
-    '<p>PBAST10 Organizing Committee<br>' +
-    '<a href="' + html_(siteUrl) + '">' + html_(siteUrl) + '</a><br>' +
-    'Contact: <a href="mailto:' + html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '">' +
-    html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '</a></p></div>';
+    '<p>PBAST10 Organizing Committee<br>Contact: ' +
+    html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '</p></div>';
 
   MailApp.sendEmail({
     to: recipient,
