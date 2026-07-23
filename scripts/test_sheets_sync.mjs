@@ -326,10 +326,15 @@ assert.equal(tracker.rows[1][21], "Not sent", "decision notification status must
 assert.equal(tracker.rows[1][24], 0);
 assert.equal(tracker.rows[1][27], "Confirmation sent");
 assert.equal(sentEmails.length, 1);
+assert.equal(sentEmails[0].to, "ada@example.org");
+assert.equal(sentEmails[0].subject, "PBAST10 Abstract Submission Confirmation");
+assert.equal(sentEmails[0].subject.includes("test-submission-1"), false, "confirmation subject must not expose the submission UUID");
 assert.equal(sentEmails[0].replyTo, "secretariat@pbast10.org");
+assert.match(sentEmails[0].htmlBody, /Review or revise your abstract/);
 
 const token = sentEmails[0].body.match(/#token=([a-f0-9]{64})/i)?.[1];
 assert.ok(token, "confirmation email must contain a 64-character token");
+assert.ok(sentEmails[0].htmlBody.includes(`#token=${token}`), "plain-text and HTML bodies must contain the same private revision token");
 const lookup = callAppsScript({ action: "get", token });
 assert.equal(lookup.ok, true);
 assert.equal(lookup.submission.abstractTitle, sampleData["abstract-title"]);
@@ -361,6 +366,10 @@ assert.equal(tracker.rows[1][24], 1);
 assert.equal(tracker.rows[1][26], "revision-event-1");
 assert.equal(tracker.rows[1][27], "Revision confirmation sent");
 assert.equal(sentEmails.length, 3, "revision confirmation and old-address alert must be sent");
+assert.equal(sentEmails[1].to, "ada.new@example.org");
+assert.equal(sentEmails[1].subject, "PBAST10 Abstract Revision Confirmation");
+assert.equal(sentEmails[2].to, "ada@example.org");
+assert.equal(sentEmails[2].subject, "PBAST10 Submission Email Address Changed");
 assert.equal(callAppsScript({ action: "get", token }).ok, false, "old token must be invalidated after revision");
 
 const history = sheets.get("Revision History");
