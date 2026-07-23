@@ -283,7 +283,7 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
     sheetText_(data['presentation-preference']),
     sheetText_(data['primary-topic']),
     sheetText_(data['abstract-title']),
-    sheetText_(data['co-authors']),
+    sheetText_(previous[COL.COAUTHORS - 1]),
     fileUrl_(data['abstract-file']),
     sheetText_(data.consent)
   ];

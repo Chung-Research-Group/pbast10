@@ -32,7 +32,6 @@ const sampleData = {
   "presentation-preference": "Oral",
   "primary-topic": "Molecular simulation and machine learning",
   "abstract-title": "A reproducible adsorption study",
-  "co-authors": "=HYPERLINK(\"https://example.invalid\",\"Babbage, Charles\")",
   "abstract-file": [{
     filename: "abstract.pdf",
     type: "file",
@@ -321,7 +320,7 @@ assert.equal(createResult.ok, true);
 assert.equal(tracker.rows.length, 2);
 assert.equal(tracker.rows[1].length, 29);
 assert.equal(tracker.rows[1][4], "Lovelace, Ada");
-assert.equal(tracker.rows[1][11].startsWith("'="), true, "formula-like text must be escaped before writing to Sheets");
+assert.equal(tracker.rows[1][11], "", "new submissions no longer collect a separate co-author field");
 assert.equal(tracker.rows[1][21], "Not sent", "decision notification status must remain untouched");
 assert.equal(tracker.rows[1][24], 0);
 assert.equal(tracker.rows[1][27], "Confirmation sent");
@@ -342,6 +341,7 @@ assert.equal(lookup.submission.abstractTitle, sampleData["abstract-title"]);
 assert.equal(lookup.submission.email, "ada@example.org");
 assert.equal("tokenHash" in lookup.submission, false, "private metadata must not be returned");
 
+tracker.rows[1][11] = "Lovelace, Ada; Babbage, Charles";
 const revisedData = {
   ...sampleData,
   email: "ada.new@example.org",
@@ -362,6 +362,7 @@ const revisionResult = callAppsScript({
 assert.equal(revisionResult.ok, true);
 assert.equal(revisionResult.revisionCount, 1);
 assert.equal(tracker.rows[1][10], "A revised adsorption study");
+assert.equal(tracker.rows[1][11], "Lovelace, Ada; Babbage, Charles", "revision without co-authors must preserve the stored legacy value");
 assert.equal(tracker.rows[1][12], "https://example.test/revised.pdf");
 assert.equal(tracker.rows[1][24], 1);
 assert.equal(tracker.rows[1][26], "revision-event-1");
@@ -378,7 +379,7 @@ assert.equal(history.rows.length, 3, "history must contain a header, original, a
 assert.equal(history.rows[1][2], 0);
 assert.equal(history.rows[2][2], 1);
 assert.equal(history.rows[2][1], "revision-event-1", "history must retain the Netlify revision event ID");
-assert.equal(history.rows[1][14].startsWith("'="), true, "history rows must also escape formula-like text");
+assert.equal(history.rows[2][14], "Lovelace, Ada; Babbage, Charles", "revision history must retain the stored legacy co-author value");
 
 const duplicate = callAppsScript({
   action: "revise",
