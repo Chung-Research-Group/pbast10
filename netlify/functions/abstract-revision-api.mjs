@@ -18,6 +18,7 @@ export default async (request) => {
   }
 
   const token = typeof body.token === "string" ? body.token.trim() : "";
+  const action = body.action === "withdraw" ? "withdraw" : "get";
   if (!/^[a-f0-9]{64}$/i.test(token)) {
     return json({ ok: false, error: "This revision link is invalid or has expired." }, 400);
   }
@@ -26,7 +27,7 @@ export default async (request) => {
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ secret: syncSecret, action: "get", token }),
+      body: JSON.stringify({ secret: syncSecret, action, token }),
     });
     const message = await response.text();
     let result;
