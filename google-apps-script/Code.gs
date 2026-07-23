@@ -269,6 +269,9 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
 
   validateSubmissionData_(data);
   var previous = sheet.getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT).getValues()[0];
+  if (clean_(previous[COL.INTAKE_STATUS - 1]) === 'Withdrawn') {
+    return jsonResponse_({ ok: false, code: 'SUBMISSION_WITHDRAWN', error: 'This abstract has been withdrawn. Contact the secretariat to request reinstatement.' });
+  }
   var previousEmail = clean_(previous[COL.EMAIL - 1]);
   var revisionNumber = Number(previous[COL.REVISION_COUNT - 1] || 0) + 1;
   var revisedAt = payload.submittedAt ? new Date(payload.submittedAt) : new Date();
