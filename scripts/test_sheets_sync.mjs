@@ -123,6 +123,31 @@ assert.equal(withdrawalApiResponse.status, 200);
 assert.equal(forwarded.body.action, "withdraw");
 assert.equal(forwarded.body.secret, "test-secret");
 
+const adminRelayModule = await import("../netlify/functions/admin-abstract-sync.mjs");
+const adminToken = "a".repeat(64);
+const adminRelay = adminRelayModule.makeHandler({
+  tokenSha256: crypto.createHash("sha256").update(adminToken).digest("hex"),
+});
+const unauthorizedAdminResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ action: "list" }),
+}));
+assert.equal(unauthorizedAdminResponse.status, 401);
+
+forwarded = null;
+const authorizedAdminResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${adminToken}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({ action: "list" }),
+}));
+assert.equal(authorizedAdminResponse.status, 200);
+assert.equal(forwarded.body.action, "admin-list");
+assert.equal(forwarded.body.secret, "test-secret");
+
 class MockRange {
   constructor(sheet, startRow, startColumn, rowCount = 1, columnCount = 1) {
     Object.assign(this, { sheet, startRow, startColumn, rowCount, columnCount });
@@ -287,6 +312,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(new URL("../google-apps-script/Code.gs", import.meta.url), "utf8"), context);
+vm.runInContext(fs.readFileSync(new URL("../google-apps-script/AdminSync.gs", import.meta.url), "utf8"), context);
 
 function callAppsScript(payload) {
   return JSON.parse(context.doPost({
@@ -345,6 +371,54 @@ assert.equal((sentEmails[0].htmlBody.match(/href=/g) || []).length, 1, "confirma
 const token = sentEmails[0].body.match(/#token=([a-f0-9]{64})/i)?.[1];
 assert.ok(token, "confirmation email must contain a 64-character token");
 assert.ok(sentEmails[0].htmlBody.includes(`#token=${token}`), "plain-text and HTML bodies must contain the same private revision token");
+
+const adminList = JSON.parse(context.adminList_(tracker).body);
+assert.equal(adminList.ok, true);
+assert.equal(adminList.rows.length, 1);
+assert.equal(adminList.rows[0].notificationStatus, "Not Sent");
+assert.match(adminList.rows[0].sourceFingerprint, /^[a-f0-9]{64}$/);
+assert.equal("tokenHash" in adminList.rows[0], false, "edit-token hashes must not leave Apps Script");
+assert.equal("consent" in adminList.rows[0], false, "consent values must not leave Apps Script");
+
+const initialAdminFingerprint = adminList.rows[0].sourceFingerprint;
+const adminUpdate = JSON.parse(context.adminUpdate_(tracker, {
+  submissionId: "test-submission-1",
+  expectedFingerprint: initialAdminFingerprint,
+  changes: {
+    intakeStatus: "Checked",
+    reviewer1: "=HYPERLINK(\"bad\")",
+    reviewer1Decision: "Accept Oral",
+    reviewer2: "Reviewer Two",
+    reviewer2Decision: "Accept Oral",
+    finalDecision: "Accept",
+    finalPresentationType: "Oral",
+    notificationStatus: "Not Sent",
+    notes: "+private note",
+  },
+}).body);
+assert.equal(adminUpdate.ok, true);
+assert.equal(adminUpdate.row.intakeStatus, "Checked");
+assert.notEqual(adminUpdate.row.sourceFingerprint, initialAdminFingerprint);
+assert.equal(tracker.rows[1][15], "'=HYPERLINK(\"bad\")", "reviewer formulas must be escaped");
+assert.equal(tracker.rows[1][22], "'+private note", "note formulas must be escaped");
+
+const staleAdminUpdate = JSON.parse(context.adminUpdate_(tracker, {
+  submissionId: "test-submission-1",
+  expectedFingerprint: initialAdminFingerprint,
+  changes: {
+    intakeStatus: "New",
+    reviewer1: "",
+    reviewer1Decision: "",
+    reviewer2: "",
+    reviewer2Decision: "",
+    finalDecision: "Pending",
+    finalPresentationType: "Pending",
+    notificationStatus: "Not Sent",
+    notes: "",
+  },
+}).body);
+assert.equal(staleAdminUpdate.ok, false);
+assert.equal(staleAdminUpdate.code, "SYNC_CONFLICT");
 const lookup = callAppsScript({ action: "get", token });
 assert.equal(lookup.ok, true);
 assert.equal(lookup.submission.abstractTitle, sampleData["abstract-title"]);
