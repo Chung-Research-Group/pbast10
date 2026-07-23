@@ -5,6 +5,11 @@
   var content = document.querySelector('#revision-content');
   var form = document.querySelector('form[name="abstract-revision"]');
   var fileInput = document.querySelector('#abstract-file');
+  var withdrawalPanel = document.querySelector('#withdrawal-panel');
+  var withdrawalComplete = document.querySelector('#withdrawal-complete');
+  var withdrawalConfirm = document.querySelector('#withdrawal-confirm');
+  var withdrawalSubmit = document.querySelector('#withdrawal-submit');
+  var withdrawalError = document.querySelector('#withdrawal-error');
   var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   var queryParams = new URLSearchParams(window.location.search);
   // Fragment tokens are not sent to Netlify, Cloudflare, or other HTTP servers.
@@ -93,6 +98,13 @@
 
       loading.hidden = true;
       content.hidden = false;
+      if (submission.intakeStatus === 'Withdrawn') {
+        form.hidden = true;
+        withdrawalPanel.hidden = true;
+        withdrawalComplete.hidden = false;
+      } else {
+        withdrawalPanel.hidden = false;
+      }
     })
     .catch(function (error) {
       showError(error.message);
@@ -114,5 +126,41 @@
 
   fileInput.addEventListener('change', function () {
     fileInput.setCustomValidity(validatePdf(fileInput.files[0]));
+  });
+
+  withdrawalConfirm.addEventListener('change', function () {
+    withdrawalSubmit.disabled = !withdrawalConfirm.checked;
+  });
+
+  withdrawalSubmit.addEventListener('click', function () {
+    if (!withdrawalConfirm.checked) return;
+    if (!window.confirm('Withdraw this abstract from PBAST10 review?')) return;
+
+    withdrawalSubmit.disabled = true;
+    withdrawalSubmit.textContent = 'Withdrawing…';
+    withdrawalError.hidden = true;
+
+    fetch('/.netlify/functions/abstract-revision-api', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'withdraw', token: token })
+    })
+      .then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (body) {
+          if (!response.ok || body.ok !== true) throw new Error(body.error || 'The withdrawal service is temporarily unavailable.');
+          return body;
+        });
+      })
+      .then(function () {
+        form.hidden = true;
+        withdrawalPanel.hidden = true;
+        withdrawalComplete.hidden = false;
+      })
+      .catch(function (error) {
+        withdrawalSubmit.disabled = false;
+        withdrawalSubmit.textContent = 'Confirm Withdrawal';
+        withdrawalError.textContent = error.message;
+        withdrawalError.hidden = false;
+      });
   });
 })();
