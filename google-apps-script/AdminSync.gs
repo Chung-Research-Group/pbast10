@@ -205,6 +205,204 @@ function adminIso_(value) {
 }
 
 
+
+/**
+ * Removes selected abstracts after validating every current fingerprint.
+ * Validation completes before any row is deleted, so a stale selection cannot
+ * cause a partial removal. Rows are deleted from bottom to top.
+ */
+function adminDelete_(sheet, payload) {
+  var items = payload.items;
+  if (!Array.isArray(items) || items.length < 1 || items.length > 50) {
+    throw new Error('Select between 1 and 50 abstracts to remove.');
+  }
+
+  var seen = {};
+  var resolved = [];
+  for (var i = 0; i < items.length; i++) {
+    var submissionId = clean_(items[i] && items[i].submissionId);
+    var expectedFingerprint = clean_(items[i] && items[i].expectedFingerprint);
+    if (!submissionId || seen[submissionId]) {
+      throw new Error('The removal list contains an invalid or duplicate submission ID.');
+    }
+    seen[submissionId] = true;
+
+    var rowNumber = findRowByValue_(sheet, COL.SUBMISSION_ID, submissionId);
+    if (!rowNumber) {
+      return jsonResponse_({
+        ok: false,
+        code: 'NOT_FOUND',
+        error: 'The abstract ' + submissionId + ' was not found in Google Sheets.'
+      });
+    }
+    var current = sheet
+      .getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT)
+      .getValues()[0];
+    var currentFingerprint = adminFingerprint_(current);
+    if (
+      expectedFingerprint &&
+      !secureEquals_(expectedFingerprint, currentFingerprint)
+    ) {
+      return jsonResponse_({
+        ok: false,
+        code: 'SYNC_CONFLICT',
+        error: 'The abstract ' + submissionId + ' changed after it was selected. Synchronize and review the newer values.',
+        row: adminRowFromValues_(current)
+      });
+    }
+    resolved.push({ id: submissionId, rowNumber: rowNumber });
+  }
+
+  resolved.sort(function (left, right) {
+    return right.rowNumber - left.rowNumber;
+  });
+  for (var j = 0; j < resolved.length; j++) {
+    sheet.deleteRow(resolved[j].rowNumber);
+  }
+
+  return jsonResponse_({
+    ok: true,
+    deletedIds: items.map(function (item) {
+      return clean_(item.submissionId);
+    })
+  });
+}
+
+/**
+ * Sends one acceptance notification. The spreadsheet notification status is
+ * the idempotency guard, preventing duplicate mail when an accepted record is
+ * saved or retried more than once.
+ */
+function adminAcceptanceEmail_(sheet, payload, properties) {
+  var submissionId = clean_(payload.submissionId);
+  var expectedFingerprint = clean_(payload.expectedFingerprint);
+  if (!submissionId) throw new Error('Submission ID is required.');
+
+  var rowNumber = findRowByValue_(sheet, COL.SUBMISSION_ID, submissionId);
+  if (!rowNumber) {
+    return jsonResponse_({
+      ok: false,
+      code: 'NOT_FOUND',
+      error: 'The abstract was not found in Google Sheets.'
+    });
+  }
+
+  var current = sheet
+    .getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT)
+    .getValues()[0];
+  var currentFingerprint = adminFingerprint_(current);
+  if (
+    expectedFingerprint &&
+    !secureEquals_(expectedFingerprint, currentFingerprint)
+  ) {
+    return jsonResponse_({
+      ok: false,
+      code: 'SYNC_CONFLICT',
+      error: 'This abstract changed before the acceptance email was sent.',
+      row: adminRowFromValues_(current)
+    });
+  }
+
+  var decision = clean_(current[COL.FINAL_DECISION - 1]);
+  var presentationType = clean_(current[COL.FINAL_PRESENTATION_TYPE - 1]);
+  var notificationStatus = adminCanonicalNotification_(
+    current[COL.NOTIFICATION_STATUS - 1]
+  );
+  if (decision !== 'Accept') {
+    throw new Error('Only accepted abstracts can receive an acceptance email.');
+  }
+  if (['Oral', 'Poster'].indexOf(presentationType) === -1) {
+    throw new Error('Choose Oral or Poster before sending the acceptance email.');
+  }
+  if (['Sent', 'Confirmed'].indexOf(notificationStatus) !== -1) {
+    return jsonResponse_({
+      ok: true,
+      delivered: false,
+      duplicate: true,
+      row: adminRowFromValues_(current)
+    });
+  }
+
+  var email = clean_(current[COL.EMAIL - 1]).toLowerCase();
+  var firstName = clean_(current[COL.FIRST_NAME - 1]);
+  var lastName = clean_(current[COL.LAST_NAME - 1]);
+  var fullName = formatName_(lastName, firstName);
+  var title = clean_(current[COL.TITLE - 1]);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('The submitter email address is invalid.');
+  }
+
+  var subject = '[PBAST10] Abstract accepted — ' + submissionId;
+  var text = [
+    'Dear ' + (firstName || fullName) + ',',
+    '',
+    'We are pleased to inform you that your abstract has been accepted for presentation at the 10th Pacific Basin Conference on Adsorption Science & Technology (PBAST10).',
+    '',
+    'Submission ID: ' + submissionId,
+    'Abstract title: ' + title,
+    'Presentation type: ' + presentationType,
+    '',
+    'PBAST10 will be held May 31–June 3, 2027 at Yonsei University in Seoul, Republic of Korea.',
+    'Detailed presentation and program instructions will be sent separately.',
+    '',
+    'If you have any questions, please contact secretariat@pbast10.org.',
+    '',
+    'PBAST10 Secretariat'
+  ].join('\n');
+  var html =
+    '<div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:auto;color:#172535;line-height:1.65">' +
+    '<div style="border-top:6px solid #003876;padding:30px;border-right:1px solid #dfe6ec;border-bottom:1px solid #dfe6ec;border-left:1px solid #dfe6ec">' +
+    '<p>Dear ' + adminEscapeHtml_(firstName || fullName) + ',</p>' +
+    '<p>We are pleased to inform you that your abstract has been <strong>accepted</strong> for presentation at the 10th Pacific Basin Conference on Adsorption Science &amp; Technology (PBAST10).</p>' +
+    '<table style="width:100%;border-collapse:collapse;margin:22px 0;background:#f4f7f9">' +
+    adminInviteRow_('Submission ID', adminEscapeHtml_(submissionId)) +
+    adminInviteRow_('Abstract title', adminEscapeHtml_(title)) +
+    adminInviteRow_('Presentation type', '<strong>' + adminEscapeHtml_(presentationType) + '</strong>') +
+    '</table>' +
+    '<p>PBAST10 will be held <strong>May 31–June 3, 2027</strong> at Yonsei University in Seoul, Republic of Korea. Detailed presentation and program instructions will be sent separately.</p>' +
+    '<p>If you have any questions, please contact <a href="mailto:secretariat@pbast10.org">secretariat@pbast10.org</a>.</p>' +
+    '<p style="margin-top:28px">PBAST10 Secretariat</p>' +
+    '</div></div>';
+
+  try {
+    MailApp.sendEmail({
+      to: email,
+      subject: subject,
+      body: text,
+      htmlBody: html,
+      name: 'PBAST10 Secretariat',
+      replyTo:
+        properties.getProperty('REPLY_TO_EMAIL') ||
+        'secretariat@pbast10.org'
+    });
+    sheet
+      .getRange(rowNumber, COL.NOTIFICATION_STATUS)
+      .setValue('Sent');
+    current = sheet
+      .getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT)
+      .getValues()[0];
+    return jsonResponse_({
+      ok: true,
+      delivered: true,
+      sentAt: new Date().toISOString(),
+      row: adminRowFromValues_(current)
+    });
+  } catch (error) {
+    sheet
+      .getRange(rowNumber, COL.NOTIFICATION_STATUS)
+      .setValue('Failed');
+    current = sheet
+      .getRange(rowNumber, 1, 1, COL.CONFIRMATION_SENT_AT)
+      .getValues()[0];
+    return jsonResponse_({
+      ok: true,
+      delivered: false,
+      emailError: 'The acceptance decision was saved, but email delivery failed.',
+      row: adminRowFromValues_(current)
+    });
+  }
+}
+
 /**
  * Sends one reviewer an individual temporary passcode and login instructions.
  * The caller has already passed the shared-secret check in Code.gs.
