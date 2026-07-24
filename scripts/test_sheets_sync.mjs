@@ -148,6 +148,48 @@ assert.equal(authorizedAdminResponse.status, 200);
 assert.equal(forwarded.body.action, "admin-list");
 assert.equal(forwarded.body.secret, "test-secret");
 
+forwarded = null;
+const acceptanceRelayResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${adminToken}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    action: "acceptance-email",
+    submissionId: "test-submission-1",
+    expectedFingerprint: "b".repeat(64),
+  }),
+}));
+assert.equal(acceptanceRelayResponse.status, 200);
+assert.equal(forwarded.body.action, "admin-acceptance-email");
+assert.equal(forwarded.body.submissionId, "test-submission-1");
+assert.equal(forwarded.body.expectedFingerprint, "b".repeat(64));
+
+forwarded = null;
+const reviewerRelayResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${adminToken}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    action: "reviewer-invite",
+    email: "reviewer@example.org",
+    name: "Example Reviewer",
+    temporaryPasscode: "Abcd-Efgh-2345",
+    loginUrl: "https://admin.pbast10.org/reviewer/login",
+    deadline: "2027-02-28T14:59:00.000Z",
+  }),
+}));
+assert.equal(reviewerRelayResponse.status, 200);
+assert.equal(forwarded.body.action, "admin-reviewer-invite");
+assert.equal(forwarded.body.email, "reviewer@example.org");
+assert.equal(forwarded.body.name, "Example Reviewer");
+assert.equal(forwarded.body.temporaryPasscode, "Abcd-Efgh-2345");
+assert.equal(forwarded.body.loginUrl, "https://admin.pbast10.org/reviewer/login");
+assert.equal(forwarded.body.deadline, "2027-02-28T14:59:00.000Z");
+
 class MockRange {
   constructor(sheet, startRow, startColumn, rowCount = 1, columnCount = 1) {
     Object.assign(this, { sheet, startRow, startColumn, rowCount, columnCount });
@@ -256,6 +298,9 @@ const spreadsheet = {
   getName: () => "PBAST10 Abstract Submission Tracker",
 };
 const sentEmails = [];
+const brevoRequests = [];
+let brevoStatus = 201;
+let brevoResponseBody = JSON.stringify({ messageId: "brevo-test-message" });
 let uuidCounter = 0;
 
 function textOutput(body) {
@@ -308,6 +353,19 @@ const context = {
     getRemainingDailyQuota: () => 100,
     sendEmail: (message) => sentEmails.push(message),
   },
+  UrlFetchApp: {
+    fetch: (url, options) => {
+      brevoRequests.push({
+        url,
+        options,
+        body: JSON.parse(options.payload),
+      });
+      return {
+        getResponseCode: () => brevoStatus,
+        getContentText: () => brevoResponseBody,
+      };
+    },
+  },
   ContentService: { createTextOutput: textOutput, MimeType: { JSON: "application/json" } },
 };
 vm.createContext(context);
@@ -325,6 +383,10 @@ assert.equal(setup.spreadsheetId, "new-workspace-sheet-id");
 assert.equal(setup.replyTo, "secretariat@pbast10.org");
 assert.equal(properties.get("SPREADSHEET_ID"), "new-workspace-sheet-id");
 assert.match(properties.get("SYNC_SECRET"), /^[a-f0-9]{96}$/);
+assert.equal(properties.get("EMAIL_PROVIDER"), "brevo");
+assert.equal(properties.get("BREVO_SENDER_EMAIL"), "secretariat@pbast10.org");
+assert.equal(properties.get("BREVO_SENDER_NAME"), "PBAST10 Organizing Committee");
+assert.equal(properties.get("BREVO_TEST_RECIPIENT"), "secretariat@pbast10.org");
 assert.deepEqual(tracker.rows[0], Array.from(context.TRACKER_HEADERS));
 const lists = sheets.get("Lists");
 assert.ok(lists, "initializer must create the validation Lists sheet");
@@ -345,6 +407,7 @@ assert.equal(summary.rows[9][1], '=COUNTIF(\'Abstract Tracker\'!V2:V1000,"Sent")
 const originalSecret = properties.get("SYNC_SECRET");
 context.initializePBAST10();
 assert.equal(properties.get("SYNC_SECRET"), originalSecret, "rerunning setup must not rotate the shared secret");
+properties.set("EMAIL_PROVIDER", "mailapp");
 
 const createResult = callAppsScript({
   action: "create",
@@ -500,5 +563,114 @@ const duplicate = callAppsScript({
 assert.equal(duplicate.ok, true);
 assert.equal(duplicate.duplicate, true);
 assert.equal(history.rows.length, 4, "retry must not append another history row");
+
+properties.set("EMAIL_PROVIDER", "brevo");
+assert.throws(
+  () => context.sendTransactionalEmail_({
+    to: "missing-key@example.org",
+    subject: "Missing key check",
+    textContent: "Test",
+    htmlContent: "<p>Test</p>",
+    replyTo: "secretariat@pbast10.org",
+  }, context.PropertiesService.getScriptProperties()),
+  /BREVO_API_KEY is missing/,
+  "Brevo must fail closed rather than silently falling back to MailApp",
+);
+properties.set("BREVO_API_KEY", "test-brevo-key");
+properties.set("BREVO_SENDER_EMAIL", "secretariat@pbast10.org");
+properties.set("BREVO_SENDER_NAME", "PBAST10 Secretariat");
+properties.set("REVIEWER_PORTAL_URL", "https://admin.pbast10.org/reviewer/login");
+
+const brevoSubmission = callAppsScript({
+  action: "create",
+  submissionId: "brevo-submission-1",
+  submittedAt: "2026-07-24T01:02:03.000Z",
+  data: {
+    ...sampleData,
+    email: "brevo.recipient@example.org",
+    "abstract-title": "Transactional delivery through Brevo",
+  },
+});
+assert.equal(brevoSubmission.ok, true);
+assert.equal(brevoRequests.length, 1, "submission confirmation must use Brevo when configured");
+assert.equal(brevoRequests[0].url, "https://api.brevo.com/v3/smtp/email");
+assert.equal(brevoRequests[0].options.headers["api-key"], "test-brevo-key");
+assert.equal(brevoRequests[0].body.to[0].email, "brevo.recipient@example.org");
+assert.equal(brevoRequests[0].body.replyTo.email, "secretariat@pbast10.org");
+assert.equal(brevoRequests[0].body.subject, "[PBAST10] Abstract submission confirmed — brevo-submission-1");
+
+const acceptedRow = tracker.rows[2];
+acceptedRow[14] = "Checked";
+acceptedRow[19] = "Accept";
+acceptedRow[20] = "Oral";
+acceptedRow[21] = "Not sent";
+const acceptance = callAppsScript({
+  action: "admin-acceptance-email",
+  submissionId: "brevo-submission-1",
+  expectedFingerprint: context.adminFingerprint_(acceptedRow),
+});
+assert.equal(acceptance.ok, true);
+assert.equal(acceptance.delivered, true);
+assert.equal(acceptedRow[21], "Sent");
+assert.equal(brevoRequests.length, 2, "acceptance notification must use the same Brevo path");
+assert.equal(brevoRequests[1].body.subject, "[PBAST10] Abstract accepted — brevo-submission-1");
+
+const reviewerInvite = callAppsScript({
+  action: "admin-reviewer-invite",
+  email: "reviewer@example.org",
+  name: "Example Reviewer",
+  temporaryPasscode: "Abcd-Efgh-2345",
+  loginUrl: "https://admin.pbast10.org/reviewer/login",
+  deadline: "2027-02-28T14:59:00.000Z",
+});
+assert.equal(reviewerInvite.ok, true);
+assert.equal(brevoRequests.length, 3, "reviewer invitation must use the same Brevo path");
+assert.equal(brevoRequests[2].body.to[0].email, "reviewer@example.org");
+assert.equal(brevoRequests[2].body.subject, "[PBAST10] Abstract review login details");
+
+properties.set("BREVO_TEST_RECIPIENT", "delivery.test@example.org");
+const testEmailResult = context.testBrevoTransactionalDelivery();
+assert.equal(testEmailResult.ok, true);
+assert.equal(testEmailResult.provider, "brevo");
+assert.equal(testEmailResult.recipient, "delivery.test@example.org");
+assert.equal(testEmailResult.messageId, "brevo-test-message");
+assert.match(testEmailResult.sentAt, /^\d{4}-\d{2}-\d{2}T/);
+assert.equal(brevoRequests.length, 4, "the diagnostic message must use the shared Brevo path");
+assert.equal(brevoRequests[3].body.to[0].email, "delivery.test@example.org");
+assert.equal(brevoRequests[3].body.subject, "[PBAST10] Brevo transactional email test");
+assert.match(brevoRequests[3].body.textContent, /abstract confirmations/);
+assert.match(brevoRequests[3].body.htmlContent, /acceptance notifications/);
+properties.set("BREVO_TEST_RECIPIENT", "invalid");
+assert.throws(
+  () => context.sendTestEmail(),
+  /BREVO_TEST_RECIPIENT/i,
+  "the diagnostic function must reject an invalid recipient before calling Brevo",
+);
+assert.equal(brevoRequests.length, 4, "an invalid diagnostic recipient must not call Brevo");
+properties.set("BREVO_TEST_RECIPIENT", "delivery.test@example.org");
+
+brevoStatus = 400;
+brevoResponseBody = JSON.stringify({ message: "sender not verified" });
+const originalConsoleError = context.console.error;
+context.console.error = () => {};
+let failedBrevoSubmission;
+try {
+  failedBrevoSubmission = callAppsScript({
+    action: "create",
+    submissionId: "brevo-failure-1",
+    submittedAt: "2026-07-24T02:03:04.000Z",
+    data: {
+      ...sampleData,
+      email: "failure@example.org",
+      "abstract-title": "Provider error visibility",
+    },
+  });
+} finally {
+  context.console.error = originalConsoleError;
+}
+assert.equal(failedBrevoSubmission.ok, false);
+assert.match(failedBrevoSubmission.error, /Brevo rejected.*HTTP 400.*sender not verified/);
+assert.equal(tracker.rows[3][27], "Confirmation failed");
+assert.match(tracker.rows[3][22], /Brevo rejected.*sender not verified/);
 
 console.log("Abstract confirmation and revision tests passed.");

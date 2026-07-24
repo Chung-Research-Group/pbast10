@@ -12,9 +12,16 @@ while signed in as `secretariat@pbast10.org`.
    **New project**.
 4. Rename the project `PBAST10 Abstract Automation`.
 5. Replace the contents of `Code.gs` with the repository's
-   `google-apps-script/Code.gs`, then save.
-6. Select `initializePBAST10` in the function menu and click **Run**.
-7. Approve the requested Google Sheets, Drive, and email permissions.
+   `google-apps-script/Code.gs`.
+6. Add a script file named `AdminSync.gs` and copy the repository's
+   `google-apps-script/AdminSync.gs` into it.
+7. Open **Project Settings**, enable **Show "appsscript.json" manifest file in
+   editor**, and replace the manifest with
+   `google-apps-script/appsscript.json`.
+8. Save all three files.
+9. Select `initializePBAST10` in the function menu and click **Run**.
+10. Approve the requested Google Sheets, email, and external-request
+    permissions.
 
 `initializePBAST10()` automatically:
 
@@ -29,6 +36,8 @@ while signed in as `secretariat@pbast10.org`.
   exist;
 - sets the official reply address to `secretariat@pbast10.org`;
 - sets the site URL and revision deadline defaults.
+- sets Brevo as the transactional email provider and initializes the verified
+  sender address/name; the API key must still be added manually.
 
 It is safe to run the initializer again. It reuses the configured spreadsheet
 and secret and does not delete submissions. Re-running it also creates or
@@ -57,9 +66,41 @@ Under **Project Settings -> Script Properties**, confirm:
 | `SITE_URL` | `https://pbast10.org` |
 | `REPLY_TO_EMAIL` | `secretariat@pbast10.org` |
 | `REVISION_DEADLINE` | `2026-11-30T23:59:59+09:00` |
+| `EMAIL_PROVIDER` | `brevo` |
+| `BREVO_API_KEY` | Brevo transactional API key; never commit this value |
+| `BREVO_SENDER_EMAIL` | A sender authenticated in Brevo, normally `secretariat@pbast10.org` |
+| `BREVO_SENDER_NAME` | `PBAST10 Organizing Committee` |
+| `REVIEWER_PORTAL_URL` | `https://pbast10-admin.drygchung.chatgpt.site/reviewer/login` |
+| `BREVO_TEST_RECIPIENT` | Address that receives the direct Brevo test |
+| `TEST_EMAIL_RECIPIENT` | Legacy alias accepted when `BREVO_TEST_RECIPIENT` is absent |
 
 Change `REVISION_DEADLINE` before deployment if the actual revision schedule is
 different. Use an ISO 8601 timestamp with the Seoul offset.
+
+`EMAIL_PROVIDER=brevo` is the production setting and the code defaults to
+Brevo if the property is absent. A missing Brevo key therefore produces an
+explicit configuration error instead of silently sending from Google
+MailApp. If Brevo is temporarily unavailable, change `EMAIL_PROVIDER` to
+`mailapp` explicitly; the same templates are then sent through the Google
+Workspace account that owns the deployment. Do not store the Brevo API key in
+GitHub, the spreadsheet, Netlify form fields, or client-side JavaScript.
+
+### Send a real test email
+
+1. Set `BREVO_TEST_RECIPIENT` under **Project Settings -> Script Properties**.
+2. Select `testBrevoTransactionalDelivery` in the Apps Script function menu.
+   `sendTestEmail` is an equivalent alias and is also shown.
+3. Click **Run** and approve permissions if Google prompts.
+4. Open **Execution log**. A successful run returns `ok: true`, the provider,
+   recipient, Brevo message ID, and timestamp.
+5. Confirm both receipt in the destination mailbox and a successful event in
+   **Brevo -> Transactional -> Logs**.
+
+This sends a real email directly through the same `sendViaBrevo_()` helper used
+by abstract confirmations, acceptance notifications, and reviewer invitations.
+It does not create a test abstract or change the spreadsheet. A successful
+HTTP 201 response proves that Brevo accepted the request; inbox delivery must
+still be checked separately.
 
 ## 3. Deploy the new web app
 
@@ -80,10 +121,11 @@ After later code changes, saving alone does not update the live endpoint. Use
 **Deploy -> Manage deployments -> Edit -> New version -> Deploy**. The `/exec`
 URL then remains unchanged.
 
-The confirmation email is sent only by this Apps Script deployment. Changes to
-the email subject, plain-text body, or HTML body therefore require a new Apps
-Script deployment version, but do not require a Netlify redeploy, environment
-variable change, Cloudflare DNS change, or Squarespace change.
+Submission confirmations, revision confirmations, withdrawal confirmations,
+acceptance notifications, email-change alerts, and reviewer invitations are
+sent only by this Apps Script deployment. Changes to their subjects, plain-text
+bodies, HTML bodies, or provider logic therefore require a new Apps Script
+deployment version, but do not require a Netlify redeploy or DNS change.
 
 ## 4. Connect Netlify
 
@@ -107,7 +149,8 @@ Use a disposable test submission and verify all of the following:
 1. The submission appears in Netlify Forms.
 2. Exactly one row appears in `Abstract Tracker`.
 3. The submitter receives the confirmation email.
-4. The message header shows the Workspace account as the sender and
+4. The Brevo transactional log records a successful delivery request and the
+   message header shows the authenticated PBAST10 sender with
    `secretariat@pbast10.org` as Reply-To.
 5. The subject begins with `[PBAST10]`, contains the non-secret submission ID,
    and the message includes both a plain-text body and a minimal HTML body with
@@ -125,11 +168,12 @@ Netlify form
 -> Netlify function
 -> Workspace Apps Script
 -> Workspace spreadsheet
--> Google MailApp confirmation
+-> Brevo transactional email API
 ```
 
-Brevo remains separate and is used only for bulk announcements and campaigns.
-Do not put a Brevo API key into this Apps Script.
+The Apps Script falls back to Google MailApp only when
+`EMAIL_PROVIDER=mailapp`. The provider choice applies consistently to
+submission, revision, withdrawal, acceptance, and reviewer-access messages.
 
 Names are stored as **Family name, Given name**. Revision tokens are stored only
 as SHA-256 hashes, and each successful revision invalidates the prior token.

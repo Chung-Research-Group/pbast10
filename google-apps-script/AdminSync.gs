@@ -365,16 +365,17 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
     '</div></div>';
 
   try {
-    MailApp.sendEmail({
+    sendTransactionalEmail_({
       to: email,
+      toName: fullName,
       subject: subject,
-      body: text,
-      htmlBody: html,
-      name: 'PBAST10 Secretariat',
+      textContent: text,
+      htmlContent: html,
+      senderName: 'PBAST10 Secretariat',
       replyTo:
         properties.getProperty('REPLY_TO_EMAIL') ||
         'secretariat@pbast10.org'
-    });
+    }, properties);
     sheet
       .getRange(rowNumber, COL.NOTIFICATION_STATUS)
       .setValue('Sent');
@@ -388,6 +389,7 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
       row: adminRowFromValues_(current)
     });
   } catch (error) {
+    var errorMessage = clean_(error && error.message || error).slice(0, 300);
     sheet
       .getRange(rowNumber, COL.NOTIFICATION_STATUS)
       .setValue('Failed');
@@ -397,7 +399,9 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
     return jsonResponse_({
       ok: true,
       delivered: false,
-      emailError: 'The acceptance decision was saved, but email delivery failed.',
+      emailError:
+        'The acceptance decision was saved, but email delivery failed' +
+        (errorMessage ? ': ' + errorMessage : '.'),
       row: adminRowFromValues_(current)
     });
   }
@@ -422,10 +426,11 @@ function adminReviewerInvite_(payload, properties) {
   if (!/^[A-Za-z0-9-]{12,32}$/.test(temporaryPasscode)) {
     throw new Error('The temporary reviewer passcode is invalid.');
   }
-  if (
-    loginUrl !==
+  var expectedLoginUrl = (
+    properties.getProperty('REVIEWER_PORTAL_URL') ||
     'https://pbast10-admin.drygchung.chatgpt.site/reviewer/login'
-  ) {
+  ).replace(/\/$/, '');
+  if (loginUrl.replace(/\/$/, '') !== expectedLoginUrl) {
     throw new Error('The reviewer login URL is invalid.');
   }
   if (deadline.length > 80) {
@@ -469,16 +474,17 @@ function adminReviewerInvite_(payload, properties) {
     '<p style="margin-top:28px">PBAST10 Secretariat</p>' +
     '</div></div>';
 
-  MailApp.sendEmail({
+  sendTransactionalEmail_({
     to: email,
+    toName: name,
     subject: subject,
-    body: text,
-    htmlBody: html,
-    name: 'PBAST10 Secretariat',
+    textContent: text,
+    htmlContent: html,
+    senderName: 'PBAST10 Secretariat',
     replyTo:
       properties.getProperty('REPLY_TO_EMAIL') ||
       'secretariat@pbast10.org'
-  });
+  }, properties);
   return jsonResponse_({ ok: true, sentAt: new Date().toISOString() });
 }
 

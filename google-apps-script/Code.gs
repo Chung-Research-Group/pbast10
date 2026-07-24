@@ -5,7 +5,9 @@
  * It creates a new tracker spreadsheet and all required script properties.
  *
  * Optional script properties:
- *   SITE_URL, REPLY_TO_EMAIL, REVISION_DEADLINE
+ *   SITE_URL, REPLY_TO_EMAIL, REVISION_DEADLINE,
+ *   EMAIL_PROVIDER, BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME,
+ *   REVIEWER_PORTAL_URL, BREVO_TEST_RECIPIENT, TEST_EMAIL_RECIPIENT
  */
 var TRACKER_SHEET = 'Abstract Tracker';
 var HISTORY_SHEET = 'Revision History';
@@ -15,6 +17,9 @@ var TRACKER_MAX_ROWS = 1000;
 var SITE_URL_DEFAULT = 'https://pbast10.org';
 var REPLY_TO_DEFAULT = 'secretariat@pbast10.org';
 var REVISION_DEADLINE_DEFAULT = '2026-11-30T23:59:59+09:00';
+var BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+var BREVO_SENDER_EMAIL_DEFAULT = 'secretariat@pbast10.org';
+var BREVO_SENDER_NAME_DEFAULT = 'PBAST10 Organizing Committee';
 var TRACKER_HEADERS = [
   'Submission ID', 'Submitted At', 'Last Name', 'First Name', 'Full Name',
   'Email', 'Institution / Affiliation', 'Country / Region',
@@ -131,6 +136,21 @@ function initializePBAST10() {
   }
   if (!properties.getProperty('REVISION_DEADLINE')) {
     properties.setProperty('REVISION_DEADLINE', REVISION_DEADLINE_DEFAULT);
+  }
+  if (!properties.getProperty('EMAIL_PROVIDER')) {
+    properties.setProperty('EMAIL_PROVIDER', 'brevo');
+  }
+  if (!properties.getProperty('BREVO_SENDER_EMAIL')) {
+    properties.setProperty('BREVO_SENDER_EMAIL', BREVO_SENDER_EMAIL_DEFAULT);
+  }
+  if (!properties.getProperty('BREVO_SENDER_NAME')) {
+    properties.setProperty('BREVO_SENDER_NAME', BREVO_SENDER_NAME_DEFAULT);
+  }
+  if (
+    !properties.getProperty('BREVO_TEST_RECIPIENT') &&
+    !properties.getProperty('TEST_EMAIL_RECIPIENT')
+  ) {
+    properties.setProperty('BREVO_TEST_RECIPIENT', REPLY_TO_DEFAULT);
   }
 
   var tracker = spreadsheet.getSheetByName(TRACKER_SHEET);
@@ -311,10 +331,6 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
 
   try {
     sendConfirmationEmail_(current, nextToken, properties, true);
-    var newEmail = clean_(current[COL.EMAIL - 1]);
-    if (previousEmail && previousEmail.toLowerCase() !== newEmail.toLowerCase()) {
-      sendEmailChangedNotice_(previousEmail, current, properties);
-    }
     sheet.getRange(rowNumber, COL.CONFIRMATION_STATUS).setValue('Revision confirmation sent');
     sheet.getRange(rowNumber, COL.CONFIRMATION_SENT_AT).setValue(new Date());
     sheet.getRange(rowNumber, COL.NOTES).setValue('');
@@ -322,6 +338,21 @@ function reviseSubmission_(spreadsheet, sheet, payload, properties) {
     sheet.getRange(rowNumber, COL.CONFIRMATION_STATUS).setValue('Revision confirmation failed');
     sheet.getRange(rowNumber, COL.NOTES).setValue('Revision email error: ' + String(error.message || error));
     throw error;
+  }
+
+  var newEmail = clean_(current[COL.EMAIL - 1]);
+  if (previousEmail && previousEmail.toLowerCase() !== newEmail.toLowerCase()) {
+    try {
+      sendEmailChangedNotice_(previousEmail, current, properties);
+    } catch (error) {
+      // The new address has already received its revision confirmation. Record
+      // the old-address warning failure without marking that successful message
+      // as failed or causing a duplicate confirmation on a Netlify retry.
+      sheet
+        .getRange(rowNumber, COL.NOTES)
+        .setValue('Previous-email security notice failed: ' + String(error.message || error));
+      console.error(error);
+    }
   }
 
   return jsonResponse_({ ok: true, duplicate: false, submissionId: clean_(current[0]), revisionCount: revisionNumber });
@@ -386,8 +417,6 @@ function issueTokenAndSend_(sheet, rowNumber, properties, isRevision) {
 }
 
 function sendConfirmationEmail_(row, token, properties, isRevision) {
-  if (MailApp.getRemainingDailyQuota() < 1) throw new Error('No remaining daily email quota.');
-
   var submissionId = clean_(row[COL.SUBMISSION_ID - 1]);
   var recipient = clean_(row[COL.EMAIL - 1]);
   var name = clean_(row[COL.FULL_NAME - 1]);
@@ -431,26 +460,34 @@ function sendConfirmationEmail_(row, token, properties, isRevision) {
     '<p>PBAST10 Organizing Committee<br>Contact: ' +
     html_(properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT) + '</p></div>';
 
-  MailApp.sendEmail({
+  sendTransactionalEmail_({
     to: recipient,
+    toName: name,
     subject: subject,
-    body: plainBody,
-    htmlBody: htmlBody,
-    name: 'PBAST10 Organizing Committee',
+    textContent: plainBody,
+    htmlContent: htmlBody,
+    senderName: 'PBAST10 Organizing Committee',
     replyTo: properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT
-  });
+  }, properties);
 }
 
 function sendEmailChangedNotice_(oldEmail, row, properties) {
-  if (MailApp.getRemainingDailyQuota() < 1) return;
   var submissionId = clean_(row[COL.SUBMISSION_ID - 1]);
-  MailApp.sendEmail({
+  var text = 'The contact email address for PBAST10 abstract ' + submissionId +
+    ' was changed during a revision. If you did not make this change, reply to this email immediately.\n\n' +
+    'PBAST10 Organizing Committee';
+  sendTransactionalEmail_({
     to: oldEmail,
     subject: 'PBAST10 Submission Email Address Changed',
-    body: 'The contact email address for PBAST10 abstract ' + submissionId + ' was changed during a revision. If you did not make this change, reply to this email immediately.\n\nPBAST10 Organizing Committee',
-    name: 'PBAST10 Organizing Committee',
+    textContent: text,
+    htmlContent: '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#12233a;max-width:640px">' +
+      '<p>The contact email address for PBAST10 abstract <strong>' + html_(submissionId) +
+      '</strong> was changed during a revision.</p>' +
+      '<p>If you did not make this change, reply to this email immediately.</p>' +
+      '<p>PBAST10 Organizing Committee</p></div>',
+    senderName: 'PBAST10 Organizing Committee',
     replyTo: properties.getProperty('REPLY_TO_EMAIL') || REPLY_TO_DEFAULT
-  });
+  }, properties);
 }
 
 function sendWithdrawalEmail_(row, properties) {
@@ -481,25 +518,194 @@ function sendWithdrawalEmail_(row, properties) {
     '<p>To request reinstatement, contact ' + html_(replyTo) + '.</p>' +
     '<p>PBAST10 Organizing Committee</p></div>';
 
-  if (typeof sendViaBrevo_ === 'function') {
-    return sendViaBrevo_({
-      to: recipient,
-      toName: name,
-      subject: subject,
-      textContent: plainBody,
-      htmlContent: htmlBody,
-      replyTo: replyTo
-    }, properties);
+  return sendTransactionalEmail_({
+    to: recipient,
+    toName: name,
+    subject: subject,
+    textContent: plainBody,
+    htmlContent: htmlBody,
+    senderName: 'PBAST10 Organizing Committee',
+    replyTo: replyTo
+  }, properties);
+}
+
+/**
+ * Sends one transactional message through the configured provider.
+ *
+ * EMAIL_PROVIDER=brevo requires BREVO_API_KEY and BREVO_SENDER_EMAIL.
+ * EMAIL_PROVIDER=mailapp uses the Google Workspace account that owns the
+ * Apps Script deployment. Brevo is the fail-closed default when
+ * EMAIL_PROVIDER is omitted; Google MailApp is used only when the property is
+ * explicitly set to mailapp.
+ */
+function sendTransactionalEmail_(message, properties) {
+  var provider = transactionalEmailProvider_(properties);
+
+  if (provider === 'brevo') {
+    return sendViaBrevo_(message, properties);
+  }
+  if (MailApp.getRemainingDailyQuota() < 1) {
+    throw new Error('No remaining Google MailApp daily email quota.');
+  }
+  MailApp.sendEmail({
+    to: message.to,
+    subject: message.subject,
+    body: message.textContent,
+    htmlBody: message.htmlContent,
+    name: message.senderName || 'PBAST10 Secretariat',
+    replyTo: message.replyTo || REPLY_TO_DEFAULT
+  });
+  return { provider: 'mailapp' };
+}
+
+function transactionalEmailProvider_(properties) {
+  var provider = clean_(properties.getProperty('EMAIL_PROVIDER')).toLowerCase();
+  if (!provider) provider = 'brevo';
+  if (provider !== 'brevo' && provider !== 'mailapp') {
+    throw new Error('EMAIL_PROVIDER must be either "brevo" or "mailapp".');
+  }
+  return provider;
+}
+
+function sendViaBrevo_(message, properties) {
+  var apiKey = clean_(properties.getProperty('BREVO_API_KEY'));
+  var senderEmail = clean_(properties.getProperty('BREVO_SENDER_EMAIL'));
+  var senderName =
+    clean_(properties.getProperty('BREVO_SENDER_NAME')) ||
+    message.senderName ||
+    BREVO_SENDER_NAME_DEFAULT;
+  if (!apiKey) throw new Error('BREVO_API_KEY is missing.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+    throw new Error('BREVO_SENDER_EMAIL is missing or invalid.');
+  }
+  var recipientEmail = clean_(message.to).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+    throw new Error('The transactional email recipient is missing or invalid.');
+  }
+  var subject = clean_(message.subject);
+  if (!subject) throw new Error('The transactional email subject is missing.');
+  var replyToEmail = clean_(message.replyTo) || REPLY_TO_DEFAULT;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToEmail)) {
+    throw new Error('The transactional email Reply-To address is invalid.');
+  }
+  var recipient = { email: recipientEmail };
+  var recipientName = clean_(message.toName);
+  if (recipientName) recipient.name = recipientName;
+
+  var payload = {
+    sender: {
+      email: senderEmail,
+      name: senderName
+    },
+    to: [recipient],
+    subject: subject,
+    textContent: String(message.textContent || ''),
+    htmlContent: String(message.htmlContent || ''),
+    replyTo: {
+      email: replyToEmail,
+      name: 'PBAST10 Secretariat'
+    },
+    tags: ['pbast10', 'transactional']
+  };
+  var response = UrlFetchApp.fetch(BREVO_API_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      accept: 'application/json',
+      'api-key': apiKey
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var status = response.getResponseCode();
+  var responseText = response.getContentText();
+  if (status !== 201) {
+    var providerMessage = '';
+    try {
+      var decoded = JSON.parse(responseText || '{}');
+      providerMessage = clean_(decoded.message || decoded.code);
+    } catch (error) {
+      providerMessage = '';
+    }
+    throw new Error(
+      'Brevo rejected the transactional email (HTTP ' + status + ')' +
+      (providerMessage ? ': ' + providerMessage : '.')
+    );
   }
 
-  MailApp.sendEmail({
+  var messageId = '';
+  try {
+    var result = JSON.parse(responseText || '{}');
+    messageId = clean_(result.messageId);
+  } catch (error) {
+    messageId = '';
+  }
+  Logger.log('Brevo messageId: ' + messageId);
+  return { provider: 'brevo', messageId: messageId };
+}
+
+/**
+ * Sends a real diagnostic message through the same transactional-email helper
+ * used by submissions, acceptance notifications, and reviewer invitations.
+ *
+ * The original working PBAST10 deployment exposed
+ * testBrevoTransactionalDelivery(). sendTestEmail() is retained as a shorter
+ * alias so both names appear in the Apps Script function menu.
+ */
+function testBrevoTransactionalDelivery() {
+  var properties = PropertiesService.getScriptProperties();
+  var recipient = clean_(
+    properties.getProperty('BREVO_TEST_RECIPIENT') ||
+    properties.getProperty('TEST_EMAIL_RECIPIENT') ||
+    ''
+  ).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+    throw new Error(
+      'Set BREVO_TEST_RECIPIENT (or TEST_EMAIL_RECIPIENT) to a valid address under Script Properties.'
+    );
+  }
+
+  var sentAt = new Date().toISOString();
+  var replyTo = clean_(properties.getProperty('REPLY_TO_EMAIL')) || REPLY_TO_DEFAULT;
+  var result = sendViaBrevo_({
     to: recipient,
-    subject: subject,
-    body: plainBody,
-    htmlBody: htmlBody,
-    name: 'PBAST10 Organizing Committee',
+    toName: 'PBAST10 Email Test',
+    subject: '[PBAST10] Brevo transactional email test',
+    textContent: [
+      'This is a direct PBAST10 Brevo transactional email test.',
+      '',
+      'Sent at: ' + sentAt,
+      '',
+      'If you received this message, the same Brevo delivery helper used for abstract confirmations,',
+      'acceptance notifications, and reviewer invitations is working.',
+      '',
+      'PBAST10 Secretariat'
+    ].join('\n'),
+    htmlContent:
+      '<div style="font-family:Arial,sans-serif;line-height:1.6;color:#12233a;max-width:640px">' +
+      '<h2 style="color:#003876">PBAST10 Brevo Email Test</h2>' +
+      '<p>This is a direct test of the Brevo path used for abstract confirmations, ' +
+      'acceptance notifications, and reviewer invitations.</p>' +
+      '<p><strong>Sent at:</strong> ' + html_(sentAt) + '</p>' +
+      '<p>If you received this message, Brevo accepted and delivered the request.</p>' +
+      '<p>PBAST10 Secretariat</p></div>',
+    senderName: 'PBAST10 Secretariat',
     replyTo: replyTo
-  });
+  }, properties);
+
+  var diagnostic = {
+    ok: true,
+    provider: 'brevo',
+    recipient: recipient,
+    messageId: result.messageId || '',
+    sentAt: sentAt
+  };
+  Logger.log(JSON.stringify(diagnostic));
+  return diagnostic;
+}
+
+function sendTestEmail() {
+  return testBrevoTransactionalDelivery();
 }
 
 function appendHistory_(spreadsheet, trackerRow, eventId, revisionNumber, recordedAt, eventType) {
@@ -771,7 +977,19 @@ function authorizePBAST10() {
   var spreadsheetId = properties.getProperty('SPREADSHEET_ID');
   if (!spreadsheetId) throw new Error('SPREADSHEET_ID is missing.');
   SpreadsheetApp.openById(spreadsheetId).getName();
-  Logger.log('Remaining email quota: ' + MailApp.getRemainingDailyQuota());
+  var configuredProvider = transactionalEmailProvider_(properties);
+  if (configuredProvider === 'brevo') {
+    var apiKey = clean_(properties.getProperty('BREVO_API_KEY'));
+    var senderEmail = clean_(properties.getProperty('BREVO_SENDER_EMAIL'));
+    if (!apiKey) throw new Error('BREVO_API_KEY is missing.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+      throw new Error('BREVO_SENDER_EMAIL is missing or invalid.');
+    }
+  }
+  Logger.log('Transactional email provider: ' + configuredProvider);
+  if (configuredProvider === 'mailapp') {
+    Logger.log('Remaining email quota: ' + MailApp.getRemainingDailyQuota());
+  }
 }
 
 function findRowByValue_(sheet, column, value) {
