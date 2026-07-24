@@ -1,17 +1,24 @@
 // Private relay between the owner-only PBAST10 dashboard and Apps Script.
-// The repository stores only a SHA-256 token digest. The bearer token itself
-// is held by the Sites runtime.
+// The repository stores only the legacy SHA-256 token digest. A second digest
+// can be supplied through Netlify during a zero-downtime token rotation. The
+// bearer tokens themselves remain only in the dashboard runtimes.
 const ADMIN_TOKEN_SHA256 =
   "9db6ce2aa54281eed9fe12af1e2e4a32099a7a4892e6ffa110ed2414831d357e";
+const ROTATED_TOKEN_SHA256_ENV = "PBAST10_ADMIN_TOKEN_SHA256";
 
 export function makeHandler({
   tokenSha256 = ADMIN_TOKEN_SHA256,
+  additionalTokenSha256,
 } = {}) {
   return async (request) => {
   if (request.method !== "POST") {
     return json({ ok: false, error: "Method not allowed." }, 405);
   }
-  if (!(await authorized(request.headers.get("authorization"), tokenSha256))) {
+  const acceptedTokenHashes = normalizeTokenHashes([
+    tokenSha256,
+    additionalTokenSha256 ?? Netlify.env.get(ROTATED_TOKEN_SHA256_ENV),
+  ]);
+  if (!(await authorized(request.headers.get("authorization"), acceptedTokenHashes))) {
     return json({ ok: false, error: "Unauthorized." }, 401);
   }
 
@@ -114,9 +121,9 @@ export function makeHandler({
 
 export default makeHandler();
 
-async function authorized(header, expectedHash) {
+async function authorized(header, expectedHashes) {
   const match = /^Bearer ([a-f0-9]{64})$/i.exec(String(header || ""));
-  if (!match) return false;
+  if (!match || expectedHashes.length === 0) return false;
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(match[1]),
@@ -124,7 +131,22 @@ async function authorized(header, expectedHash) {
   const actual = [...new Uint8Array(digest)]
     .map((value) => value.toString(16).padStart(2, "0"))
     .join("");
-  return constantTimeEqual(actual, expectedHash);
+  let authorized = 0;
+  for (const expectedHash of expectedHashes) {
+    authorized |= Number(constantTimeEqual(actual, expectedHash));
+  }
+  return authorized === 1;
+}
+
+function normalizeTokenHashes(values) {
+  return [
+    ...new Set(
+      values
+        .flatMap((value) => String(value ?? "").split(","))
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => /^[a-f0-9]{64}$/.test(value)),
+    ),
+  ];
 }
 
 function constantTimeEqual(left, right) {
