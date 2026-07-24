@@ -29,7 +29,7 @@ export function makeHandler({
   }
 
   const action = body.action;
-  if (!["list", "update", "reviewer-invite"].includes(action)) {
+  if (!["list", "update", "delete", "acceptance-email", "reviewer-invite"].includes(action)) {
     return json({ ok: false, error: "Unsupported action." }, 400);
   }
 
@@ -43,6 +43,19 @@ export function makeHandler({
       submissionId: body.submissionId,
       expectedFingerprint: body.expectedFingerprint,
       changes: body.changes,
+    };
+  } else if (action === "delete") {
+    forwarded = {
+      secret: syncSecret,
+      action: "admin-delete",
+      items: body.items,
+    };
+  } else if (action === "acceptance-email") {
+    forwarded = {
+      secret: syncSecret,
+      action: "admin-acceptance-email",
+      submissionId: body.submissionId,
+      expectedFingerprint: body.expectedFingerprint,
     };
   } else {
     forwarded = {
