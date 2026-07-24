@@ -70,7 +70,7 @@ Under **Project Settings -> Script Properties**, confirm:
 | `BREVO_API_KEY` | Brevo transactional API key; never commit this value |
 | `BREVO_SENDER_EMAIL` | A sender authenticated in Brevo, normally `secretariat@pbast10.org` |
 | `BREVO_SENDER_NAME` | `PBAST10 Organizing Committee` |
-| `REVIEWER_PORTAL_URL` | `https://pbast10-admin.drygchung.chatgpt.site/reviewer/login` |
+| `REVIEWER_PORTAL_URL` | `https://pbast10-admin.drygchung.workers.dev/reviewer/login` |
 | `BREVO_TEST_RECIPIENT` | Address that receives the direct Brevo test |
 | `TEST_EMAIL_RECIPIENT` | Legacy alias accepted when `BREVO_TEST_RECIPIENT` is absent |
 

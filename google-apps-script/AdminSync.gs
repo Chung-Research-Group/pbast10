@@ -428,7 +428,7 @@ function adminReviewerInvite_(payload, properties) {
   }
   var expectedLoginUrl = (
     properties.getProperty('REVIEWER_PORTAL_URL') ||
-    'https://pbast10-admin.drygchung.chatgpt.site/reviewer/login'
+    'https://pbast10-admin.drygchung.workers.dev/reviewer/login'
   ).replace(/\/$/, '');
   if (loginUrl.replace(/\/$/, '') !== expectedLoginUrl) {
     throw new Error('The reviewer login URL is invalid.');

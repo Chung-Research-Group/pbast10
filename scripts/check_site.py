@@ -108,9 +108,21 @@ for form_page in ("abstract-submission.html", "revise-abstract.html"):
 if not (ROOT / "js" / "autocomplete.js").exists():
     errors.append("js/autocomplete.js is missing")
 
+admin_entry = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
+admin_url = "https://pbast10-admin.drygchung.workers.dev/"
+retired_admin_host = "pbast10-admin.drygchung.chatgpt.site"
+if admin_entry.count(admin_url) != 3:
+    errors.append("admin/index.html must use the Cloudflare admin URL in all redirect fallbacks")
+if retired_admin_host in admin_entry:
+    errors.append("admin/index.html still references the retired ChatGPT Sites admin host")
+
 for path in (ROOT / "google-apps-script").glob("*"):
-    if path.is_file() and "pbast10.org@gmail.com" in path.read_text(encoding="utf-8"):
-        errors.append(f"{path.relative_to(ROOT)}: retired Gmail contact remains")
+    if path.is_file():
+        content = path.read_text(encoding="utf-8")
+        if "pbast10.org@gmail.com" in content:
+            errors.append(f"{path.relative_to(ROOT)}: retired Gmail contact remains")
+        if retired_admin_host in content:
+            errors.append(f"{path.relative_to(ROOT)}: retired ChatGPT Sites admin host remains")
 
 if errors:
     print("Site checks failed:")
