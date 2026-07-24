@@ -44,6 +44,7 @@ var COL = {
   INTAKE_STATUS: 15,
   FINAL_DECISION: 20,
   FINAL_PRESENTATION_TYPE: 21,
+  NOTIFICATION_STATUS: 22,
   NOTES: 23,
   TOKEN_HASH: 24,
   REVISION_COUNT: 25,
@@ -84,6 +85,8 @@ function doPost(e) {
 
     if (action === 'admin-list') return adminList_(sheet);
     if (action === 'admin-update') return adminUpdate_(sheet, payload);
+    if (action === 'admin-delete') return adminDelete_(sheet, payload);
+    if (action === 'admin-acceptance-email') return adminAcceptanceEmail_(sheet, payload, properties);
     if (action === 'admin-reviewer-invite') return adminReviewerInvite_(payload, properties);
     if (action === 'get') return getSubmission_(sheet, payload, properties);
     if (action === 'withdraw') return withdrawSubmission_(spreadsheet, sheet, payload, properties);
