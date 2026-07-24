@@ -3,37 +3,38 @@
 This change connects the owner-only PBAST10 Conference Control dashboard to
 the existing `PBAST10 Abstract Submission Tracker`.
 
-## One-time Apps Script deployment
+## Updating the Apps Script deployment
 
-The production Apps Script contains Brevo-specific email helpers that are not
-fully represented by the repository copy. Preserve those helpers and make only
-the following additive change in the live Apps Script project.
+The repository copies of `Code.gs`, `AdminSync.gs`, and `appsscript.json` are
+the canonical production source. They include the complete Brevo transactional
+email helper and every administrator action. Do not preserve an untracked
+Brevo-only variant in the Apps Script editor.
 
 1. Open the Apps Script project bound to `PBAST10 Abstract Submission Tracker`.
-2. Add a script file named `AdminSync.gs`.
-3. Copy the repository file `google-apps-script/AdminSync.gs` into that file.
-4. In `Code.gs`, immediately after:
-
-   ```javascript
-   var action = clean_(payload.action) || 'create';
-   ```
-
-   add:
-
-   ```javascript
-   if (action === 'admin-list') return adminList_(sheet);
-   if (action === 'admin-update') return adminUpdate_(sheet, payload);
-   ```
-
-5. Save the project.
-6. Select **Deploy → Manage deployments → Edit** for the existing web app.
-7. Choose **New version**, keep **Execute as: Me** and the existing access
+2. Replace `Code.gs` with `google-apps-script/Code.gs`.
+3. Replace or add `AdminSync.gs` with
+   `google-apps-script/AdminSync.gs`.
+4. Enable the manifest in **Project Settings** and replace
+   `appsscript.json` with `google-apps-script/appsscript.json`.
+5. Confirm that the existing Script Properties are still present:
+   `SPREADSHEET_ID`, `SYNC_SECRET`, `SITE_URL`, `REPLY_TO_EMAIL`,
+   `REVISION_DEADLINE`, `EMAIL_PROVIDER`, `BREVO_API_KEY`,
+   `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, and `REVIEWER_PORTAL_URL`.
+   Set `BREVO_TEST_RECIPIENT` for diagnostic messages.
+   `TEST_EMAIL_RECIPIENT` remains a supported legacy alias.
+   Production must use `EMAIL_PROVIDER=brevo`; a missing API key is treated as
+   a hard configuration error and does not silently fall back to MailApp.
+6. Run `authorizePBAST10()` once and approve any newly requested permissions.
+7. Run `testBrevoTransactionalDelivery()` (or its `sendTestEmail()` alias) and
+   confirm both the execution-log message ID and the corresponding event in
+   Brevo's transactional log.
+8. Select **Deploy → Manage deployments → Edit** for the existing web app.
+9. Choose **New version**, keep **Execute as: Me** and the existing access
    setting, then deploy.
-8. Keep the existing `/exec` URL, `SPREADSHEET_ID`, `SYNC_SECRET`, Brevo
-   properties, and all other Script Properties unchanged.
+10. Keep the existing `/exec` URL. Do not change Netlify environment variables
+   when that URL and `SYNC_SECRET` are unchanged.
 
-Do not run `initializePBAST10()` and do not replace the production `Code.gs`
-with the repository copy.
+Do not run `initializePBAST10()` for an ordinary code update.
 
 ## Security properties
 
