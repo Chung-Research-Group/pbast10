@@ -317,7 +317,7 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
   if (['Sent', 'Confirmed'].indexOf(notificationStatus) !== -1) {
     return jsonResponse_({
       ok: true,
-      delivered: false,
+      delivered: true,
       duplicate: true,
       row: adminRowFromValues_(current)
     });
