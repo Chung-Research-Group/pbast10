@@ -39,8 +39,13 @@ Do not run `initializePBAST10()` for an ordinary code update.
 ## Security properties
 
 - The dashboard relay uses a separate 256-bit administrator token.
-- Only the token's SHA-256 digest is committed to this public repository.
-- The plaintext token is held only by the owner-only dashboard runtime.
+- Only the legacy token's SHA-256 digest is committed to this public
+  repository. During a zero-downtime rotation, Netlify may also hold a second
+  digest in `PBAST10_ADMIN_TOKEN_SHA256`.
+- Plaintext tokens are held only by the owner-only dashboard runtimes. Never
+  store a plaintext administrator token in Netlify or GitHub.
+- Remove `PBAST10_ADMIN_TOKEN_SHA256` after the new dashboard has been retired
+  or its token has been promoted through a reviewed code change.
 - The relay reuses Netlify's existing `GOOGLE_SHEETS_WEBHOOK_URL` and
   `SHEETS_SYNC_SECRET`; neither value is returned to the browser.
 - `admin-list` excludes consent and edit-token hashes.
