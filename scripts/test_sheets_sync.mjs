@@ -125,6 +125,11 @@ assert.equal(forwarded.body.secret, "test-secret");
 
 const adminRelayModule = await import("../netlify/functions/admin-abstract-sync.mjs");
 const adminToken = "a".repeat(64);
+const rotatedAdminToken = "b".repeat(64);
+env.set(
+  "PBAST10_ADMIN_TOKEN_SHA256",
+  crypto.createHash("sha256").update(rotatedAdminToken).digest("hex"),
+);
 const adminRelay = adminRelayModule.makeHandler({
   tokenSha256: crypto.createHash("sha256").update(adminToken).digest("hex"),
 });
@@ -145,6 +150,19 @@ const authorizedAdminResponse = await adminRelay(new Request("https://example.te
   body: JSON.stringify({ action: "list" }),
 }));
 assert.equal(authorizedAdminResponse.status, 200);
+assert.equal(forwarded.body.action, "admin-list");
+assert.equal(forwarded.body.secret, "test-secret");
+
+forwarded = null;
+const rotatedAdminResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${rotatedAdminToken}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({ action: "list" }),
+}));
+assert.equal(rotatedAdminResponse.status, 200);
 assert.equal(forwarded.body.action, "admin-list");
 assert.equal(forwarded.body.secret, "test-secret");
 
