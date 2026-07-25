@@ -1,13 +1,15 @@
 // Private relay between the owner-only PBAST10 dashboard and Apps Script.
-// The repository stores only the legacy SHA-256 token digest. A second digest
-// can be supplied through Netlify during a zero-downtime token rotation. The
-// bearer tokens themselves remain only in the dashboard runtimes.
+// The repository stores SHA-256 digests only. The 256-bit plaintext bearer
+// tokens remain exclusively in the owner-only dashboard runtimes.
 const ADMIN_TOKEN_SHA256 =
   "9db6ce2aa54281eed9fe12af1e2e4a32099a7a4892e6ffa110ed2414831d357e";
+const CURRENT_ADMIN_TOKEN_SHA256 =
+  "1f3da350e92d9337f7da45137c8bd41105c63b2a8b73a83c4c666c391d92ce6d";
 const ROTATED_TOKEN_SHA256_ENV = "PBAST10_ADMIN_TOKEN_SHA256";
 
 export function makeHandler({
   tokenSha256 = ADMIN_TOKEN_SHA256,
+  currentTokenSha256 = CURRENT_ADMIN_TOKEN_SHA256,
   additionalTokenSha256,
 } = {}) {
   return async (request) => {
@@ -16,6 +18,7 @@ export function makeHandler({
   }
   const acceptedTokenHashes = normalizeTokenHashes([
     tokenSha256,
+    currentTokenSha256,
     additionalTokenSha256 ?? Netlify.env.get(ROTATED_TOKEN_SHA256_ENV),
   ]);
   if (!(await authorized(request.headers.get("authorization"), acceptedTokenHashes))) {
