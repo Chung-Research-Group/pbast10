@@ -7,8 +7,9 @@ the existing `PBAST10 Abstract Submission Tracker`.
 
 The repository copies of `Code.gs`, `AdminSync.gs`, and `appsscript.json` are
 the canonical production source. They include the complete Brevo transactional
-email helper and every administrator action. Do not preserve an untracked
-Brevo-only variant in the Apps Script editor.
+email helper and every administrator action, including acceptance and rejection
+notifications. Do not preserve an untracked Brevo-only variant in the Apps
+Script editor.
 
 1. Open the Apps Script project bound to `PBAST10 Abstract Submission Tracker`.
 2. Replace `Code.gs` with `google-apps-script/Code.gs`.
