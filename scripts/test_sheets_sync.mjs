@@ -200,6 +200,24 @@ assert.equal(forwarded.body.submissionId, "test-submission-1");
 assert.equal(forwarded.body.expectedFingerprint, "b".repeat(64));
 
 forwarded = null;
+const rejectionRelayResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
+  method: "POST",
+  headers: {
+    authorization: `Bearer ${adminToken}`,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    action: "rejection-email",
+    submissionId: "test-submission-1",
+    expectedFingerprint: "c".repeat(64),
+  }),
+}));
+assert.equal(rejectionRelayResponse.status, 200);
+assert.equal(forwarded.body.action, "admin-rejection-email");
+assert.equal(forwarded.body.submissionId, "test-submission-1");
+assert.equal(forwarded.body.expectedFingerprint, "c".repeat(64));
+
+forwarded = null;
 const reviewerRelayResponse = await adminRelay(new Request("https://example.test/.netlify/functions/admin-abstract-sync", {
   method: "POST",
   headers: {
@@ -648,6 +666,21 @@ assert.equal(acceptedRow[21], "Sent");
 assert.equal(brevoRequests.length, 2, "acceptance notification must use the same Brevo path");
 assert.equal(brevoRequests[1].body.subject, "[PBAST10] Abstract accepted — brevo-submission-1");
 
+acceptedRow[19] = "Reject";
+acceptedRow[20] = "None";
+acceptedRow[21] = "Not sent";
+const rejection = callAppsScript({
+  action: "admin-rejection-email",
+  submissionId: "brevo-submission-1",
+  expectedFingerprint: context.adminFingerprint_(acceptedRow),
+});
+assert.equal(rejection.ok, true);
+assert.equal(rejection.delivered, true);
+assert.equal(acceptedRow[21], "Sent");
+assert.equal(brevoRequests.length, 3, "rejection notification must use the same Brevo path");
+assert.equal(brevoRequests[2].body.subject, "[PBAST10] Abstract decision — brevo-submission-1");
+assert.match(brevoRequests[2].body.textContent, /not been accepted/);
+
 const reviewerInvite = callAppsScript({
   action: "admin-reviewer-invite",
   email: "reviewer@example.org",
@@ -657,9 +690,9 @@ const reviewerInvite = callAppsScript({
   deadline: "2027-02-28T14:59:00.000Z",
 });
 assert.equal(reviewerInvite.ok, true);
-assert.equal(brevoRequests.length, 3, "reviewer invitation must use the same Brevo path");
-assert.equal(brevoRequests[2].body.to[0].email, "reviewer@example.org");
-assert.equal(brevoRequests[2].body.subject, "[PBAST10] Abstract review login details");
+assert.equal(brevoRequests.length, 4, "reviewer invitation must use the same Brevo path");
+assert.equal(brevoRequests[3].body.to[0].email, "reviewer@example.org");
+assert.equal(brevoRequests[3].body.subject, "[PBAST10] Abstract review login details");
 
 properties.set("BREVO_TEST_RECIPIENT", "delivery.test@example.org");
 const testEmailResult = context.testBrevoTransactionalDelivery();
@@ -668,18 +701,18 @@ assert.equal(testEmailResult.provider, "brevo");
 assert.equal(testEmailResult.recipient, "delivery.test@example.org");
 assert.equal(testEmailResult.messageId, "brevo-test-message");
 assert.match(testEmailResult.sentAt, /^\d{4}-\d{2}-\d{2}T/);
-assert.equal(brevoRequests.length, 4, "the diagnostic message must use the shared Brevo path");
-assert.equal(brevoRequests[3].body.to[0].email, "delivery.test@example.org");
-assert.equal(brevoRequests[3].body.subject, "[PBAST10] Brevo transactional email test");
-assert.match(brevoRequests[3].body.textContent, /abstract confirmations/);
-assert.match(brevoRequests[3].body.htmlContent, /acceptance notifications/);
+assert.equal(brevoRequests.length, 5, "the diagnostic message must use the shared Brevo path");
+assert.equal(brevoRequests[4].body.to[0].email, "delivery.test@example.org");
+assert.equal(brevoRequests[4].body.subject, "[PBAST10] Brevo transactional email test");
+assert.match(brevoRequests[4].body.textContent, /abstract confirmations/);
+assert.match(brevoRequests[4].body.htmlContent, /acceptance notifications/);
 properties.set("BREVO_TEST_RECIPIENT", "invalid");
 assert.throws(
   () => context.sendTestEmail(),
   /BREVO_TEST_RECIPIENT/i,
   "the diagnostic function must reject an invalid recipient before calling Brevo",
 );
-assert.equal(brevoRequests.length, 4, "an invalid diagnostic recipient must not call Brevo");
+assert.equal(brevoRequests.length, 5, "an invalid diagnostic recipient must not call Brevo");
 properties.set("BREVO_TEST_RECIPIENT", "delivery.test@example.org");
 
 brevoStatus = 400;

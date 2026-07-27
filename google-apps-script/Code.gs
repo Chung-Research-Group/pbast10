@@ -92,6 +92,7 @@ function doPost(e) {
     if (action === 'admin-update') return adminUpdate_(sheet, payload);
     if (action === 'admin-delete') return adminDelete_(sheet, payload);
     if (action === 'admin-acceptance-email') return adminAcceptanceEmail_(sheet, payload, properties);
+    if (action === 'admin-rejection-email') return adminRejectionEmail_(sheet, payload, properties);
     if (action === 'admin-reviewer-invite') return adminReviewerInvite_(payload, properties);
     if (action === 'get') return getSubmission_(sheet, payload, properties);
     if (action === 'withdraw') return withdrawSubmission_(spreadsheet, sheet, payload, properties);

@@ -39,7 +39,14 @@ export function makeHandler({
   }
 
   const action = body.action;
-  if (!["list", "update", "delete", "acceptance-email", "reviewer-invite"].includes(action)) {
+  if (![
+    "list",
+    "update",
+    "delete",
+    "acceptance-email",
+    "rejection-email",
+    "reviewer-invite",
+  ].includes(action)) {
     return json({ ok: false, error: "Unsupported action." }, 400);
   }
 
@@ -64,6 +71,13 @@ export function makeHandler({
     forwarded = {
       secret: syncSecret,
       action: "admin-acceptance-email",
+      submissionId: body.submissionId,
+      expectedFingerprint: body.expectedFingerprint,
+    };
+  } else if (action === "rejection-email") {
+    forwarded = {
+      secret: syncSecret,
+      action: "admin-rejection-email",
       submissionId: body.submissionId,
       expectedFingerprint: body.expectedFingerprint,
     };
