@@ -70,6 +70,10 @@ function adminUpdate_(sheet, payload) {
   }
 
   var normalized = adminValidateChanges_(changes);
+  var currentDecision = clean_(current[COL.FINAL_DECISION - 1]) || 'Pending';
+  if (normalized.finalDecision !== currentDecision) {
+    normalized.notificationStatus = 'Not Sent';
+  }
   sheet.getRange(rowNumber, COL.INTAKE_STATUS, 1, 9).setValues([[
     normalized.intakeStatus,
     sheetText_(normalized.reviewer1),
