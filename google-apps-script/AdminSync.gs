@@ -268,12 +268,20 @@ function adminDelete_(sheet, payload) {
   });
 }
 
-/**
- * Sends one acceptance notification. The spreadsheet notification status is
- * the idempotency guard, preventing duplicate mail when an accepted record is
- * saved or retried more than once.
- */
 function adminAcceptanceEmail_(sheet, payload, properties) {
+  return adminDecisionEmail_(sheet, payload, properties, 'Accept');
+}
+
+function adminRejectionEmail_(sheet, payload, properties) {
+  return adminDecisionEmail_(sheet, payload, properties, 'Reject');
+}
+
+/**
+ * Sends one final-decision notification. The spreadsheet notification status
+ * is the idempotency guard, preventing duplicate mail when a decision is saved
+ * or retried more than once.
+ */
+function adminDecisionEmail_(sheet, payload, properties, expectedDecision) {
   var submissionId = clean_(payload.submissionId);
   var expectedFingerprint = clean_(payload.expectedFingerprint);
   if (!submissionId) throw new Error('Submission ID is required.');
@@ -298,7 +306,10 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
     return jsonResponse_({
       ok: false,
       code: 'SYNC_CONFLICT',
-      error: 'This abstract changed before the acceptance email was sent.',
+      error:
+        'This abstract changed before the ' +
+        expectedDecision.toLowerCase() +
+        ' email was sent.',
       row: adminRowFromValues_(current)
     });
   }
@@ -308,11 +319,21 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
   var notificationStatus = adminCanonicalNotification_(
     current[COL.NOTIFICATION_STATUS - 1]
   );
-  if (decision !== 'Accept') {
-    throw new Error('Only accepted abstracts can receive an acceptance email.');
+  if (decision !== expectedDecision) {
+    throw new Error(
+      'Only ' +
+      expectedDecision.toLowerCase() +
+      'ed abstracts can receive this decision email.'
+    );
   }
-  if (['Oral', 'Poster'].indexOf(presentationType) === -1) {
+  if (
+    expectedDecision === 'Accept' &&
+    ['Oral', 'Poster'].indexOf(presentationType) === -1
+  ) {
     throw new Error('Choose Oral or Poster before sending the acceptance email.');
+  }
+  if (expectedDecision === 'Reject' && presentationType !== 'None') {
+    throw new Error('Rejected abstracts must have None as the presentation type.');
   }
   if (['Sent', 'Confirmed'].indexOf(notificationStatus) !== -1) {
     return jsonResponse_({
@@ -332,34 +353,61 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
     throw new Error('The submitter email address is invalid.');
   }
 
-  var subject = '[PBAST10] Abstract accepted — ' + submissionId;
-  var text = [
+  var accepted = expectedDecision === 'Accept';
+  var subject = accepted
+    ? '[PBAST10] Abstract accepted — ' + submissionId
+    : '[PBAST10] Abstract decision — ' + submissionId;
+  var outcomeText = accepted
+    ? 'We are pleased to inform you that your abstract has been accepted for presentation at the 10th Pacific Basin Conference on Adsorption Science & Technology (PBAST10).'
+    : 'After review, we regret to inform you that your abstract has not been accepted for presentation at the 10th Pacific Basin Conference on Adsorption Science & Technology (PBAST10).';
+  var textLines = [
     'Dear ' + (firstName || fullName) + ',',
     '',
-    'We are pleased to inform you that your abstract has been accepted for presentation at the 10th Pacific Basin Conference on Adsorption Science & Technology (PBAST10).',
+    outcomeText,
     '',
     'Submission ID: ' + submissionId,
-    'Abstract title: ' + title,
-    'Presentation type: ' + presentationType,
-    '',
-    'PBAST10 will be held May 31–June 3, 2027 at Yonsei University in Seoul, Republic of Korea.',
-    'Detailed presentation and program instructions will be sent separately.',
+    'Abstract title: ' + title
+  ];
+  if (accepted) {
+    textLines.push('Presentation type: ' + presentationType);
+    textLines.push(
+      '',
+      'PBAST10 will be held May 31–June 3, 2027 at Yonsei University in Seoul, Republic of Korea.',
+      'Detailed presentation and program instructions will be sent separately.'
+    );
+  } else {
+    textLines.push('', 'We appreciate your interest in PBAST10.');
+  }
+  textLines.push(
     '',
     'If you have any questions, please contact secretariat@pbast10.org.',
     '',
     'PBAST10 Secretariat'
-  ].join('\n');
+  );
+  var text = textLines.join('\n');
+  var decisionRow = accepted
+    ? adminInviteRow_(
+        'Presentation type',
+        '<strong>' + adminEscapeHtml_(presentationType) + '</strong>'
+      )
+    : '';
   var html =
     '<div style="font-family:Arial,Helvetica,sans-serif;max-width:680px;margin:auto;color:#172535;line-height:1.65">' +
     '<div style="border-top:6px solid #003876;padding:30px;border-right:1px solid #dfe6ec;border-bottom:1px solid #dfe6ec;border-left:1px solid #dfe6ec">' +
     '<p>Dear ' + adminEscapeHtml_(firstName || fullName) + ',</p>' +
-    '<p>We are pleased to inform you that your abstract has been <strong>accepted</strong> for presentation at the 10th Pacific Basin Conference on Adsorption Science &amp; Technology (PBAST10).</p>' +
+    '<p>' +
+    (accepted
+      ? 'We are pleased to inform you that your abstract has been <strong>accepted</strong> for presentation at the 10th Pacific Basin Conference on Adsorption Science &amp; Technology (PBAST10).'
+      : 'After review, we regret to inform you that your abstract has <strong>not been accepted</strong> for presentation at the 10th Pacific Basin Conference on Adsorption Science &amp; Technology (PBAST10).') +
+    '</p>' +
     '<table style="width:100%;border-collapse:collapse;margin:22px 0;background:#f4f7f9">' +
     adminInviteRow_('Submission ID', adminEscapeHtml_(submissionId)) +
     adminInviteRow_('Abstract title', adminEscapeHtml_(title)) +
-    adminInviteRow_('Presentation type', '<strong>' + adminEscapeHtml_(presentationType) + '</strong>') +
+    decisionRow +
     '</table>' +
-    '<p>PBAST10 will be held <strong>May 31–June 3, 2027</strong> at Yonsei University in Seoul, Republic of Korea. Detailed presentation and program instructions will be sent separately.</p>' +
+    (accepted
+      ? '<p>PBAST10 will be held <strong>May 31–June 3, 2027</strong> at Yonsei University in Seoul, Republic of Korea. Detailed presentation and program instructions will be sent separately.</p>'
+      : '<p>We appreciate your interest in PBAST10.</p>') +
     '<p>If you have any questions, please contact <a href="mailto:secretariat@pbast10.org">secretariat@pbast10.org</a>.</p>' +
     '<p style="margin-top:28px">PBAST10 Secretariat</p>' +
     '</div></div>';
@@ -400,7 +448,9 @@ function adminAcceptanceEmail_(sheet, payload, properties) {
       ok: true,
       delivered: false,
       emailError:
-        'The acceptance decision was saved, but email delivery failed' +
+        'The ' +
+        expectedDecision.toLowerCase() +
+        ' decision was saved, but email delivery failed' +
         (errorMessage ? ': ' + errorMessage : '.'),
       row: adminRowFromValues_(current)
     });
