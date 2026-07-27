@@ -666,9 +666,27 @@ assert.equal(acceptedRow[21], "Sent");
 assert.equal(brevoRequests.length, 2, "acceptance notification must use the same Brevo path");
 assert.equal(brevoRequests[1].body.subject, "[PBAST10] Abstract accepted — brevo-submission-1");
 
-acceptedRow[19] = "Reject";
-acceptedRow[20] = "None";
-acceptedRow[21] = "Not sent";
+const rejectionUpdate = JSON.parse(context.adminUpdate_(tracker, {
+  submissionId: "brevo-submission-1",
+  expectedFingerprint: context.adminFingerprint_(acceptedRow),
+  changes: {
+    intakeStatus: "Checked",
+    reviewer1: "",
+    reviewer1Decision: "",
+    reviewer2: "",
+    reviewer2Decision: "",
+    finalDecision: "Reject",
+    finalPresentationType: "None",
+    notificationStatus: "Sent",
+    notes: "",
+  },
+}).body);
+assert.equal(rejectionUpdate.ok, true);
+assert.equal(
+  rejectionUpdate.row.notificationStatus,
+  "Not Sent",
+  "changing the final decision must reset a prior delivery status",
+);
 const rejection = callAppsScript({
   action: "admin-rejection-email",
   submissionId: "brevo-submission-1",
