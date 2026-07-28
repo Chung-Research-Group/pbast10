@@ -240,6 +240,10 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
 .honeypot{position:absolute;left:-9999px}
 .status-box{max-width:760px;background:#fff;border:1px solid var(--line);border-top:3px solid var(--green);padding:34px 36px}
 .status-box.status-error{border-top-color:var(--red)}
+.confirmation-help{margin:24px 0 0;padding:18px 20px;background:#fff8df;border:1px solid #dfc76f;border-left:5px solid var(--gold)}
+.confirmation-help h3{font:700 18px/1.4 var(--serif);color:var(--ink);margin:0 0 8px}
+.confirmation-help p{margin:0;font:500 15.5px/1.7 var(--sans);color:var(--body)}
+.confirmation-help a{font-weight:600;overflow-wrap:anywhere}
 .panel-navy p+p{margin-top:7px}
 .panel-navy strong{color:#fff}
 
