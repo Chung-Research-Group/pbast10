@@ -4,8 +4,10 @@
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+from datetime import date, datetime
 import json
 import math
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +15,10 @@ HTML_FILES = sorted(ROOT.glob("*.html"))
 errors = []
 titles = {}
 descriptions = {}
+footer_date_pattern = re.compile(
+    r'<time datetime="(\d{4}-\d{2}-\d{2})" data-site-updated>'
+    r'Updated ([A-Za-z]+ \d{1,2}, \d{4})</time>'
+)
 
 
 class PageParser(HTMLParser):
@@ -80,6 +86,20 @@ for path in HTML_FILES:
         errors.append(f"{rel}: blocked external Google dependency remains")
     if "pbast10.org@gmail.com" in source:
         errors.append(f"{rel}: retired Gmail contact remains")
+
+    if 'class="site-footer"' in source:
+        footer_dates = footer_date_pattern.findall(source)
+        if len(footer_dates) != 1:
+            errors.append(f"{rel}: expected one valid site-update footer marker, found {len(footer_dates)}")
+        else:
+            iso_text, display_text = footer_dates[0]
+            try:
+                iso_date = date.fromisoformat(iso_text)
+                display_date = datetime.strptime(display_text, "%B %d, %Y").date()
+                if iso_date != display_date:
+                    errors.append(f"{rel}: footer update datetime and visible date do not match")
+            except ValueError:
+                errors.append(f"{rel}: footer update date is invalid")
 
     for image in parser.images:
         src = image.get("src", "")

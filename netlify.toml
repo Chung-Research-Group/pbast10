@@ -1,0 +1,3 @@
+[build]
+  command = "node scripts/update_footer_date.mjs"
+  publish = "."
