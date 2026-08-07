@@ -195,6 +195,22 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 
 .logo-slot{background:#fff;border:1px dashed var(--chip-border);display:flex;align-items:center;justify-content:center;font:500 13px var(--sans);color:var(--faint)}
 
+/* homepage organizers */
+.organizer-section{padding-top:0;padding-bottom:64px}
+.organizer-heading{margin-bottom:26px}
+.organizer-heading .kicker{margin-bottom:8px}
+.organizer-heading .section-title{margin:0}
+.organizer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+.organizer-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--navy);padding:30px 32px;display:grid;grid-template-rows:72px auto;gap:24px}
+.organizer-logo{display:flex;align-items:center;min-width:0}
+.organizer-logo img{display:block;width:auto;max-width:100%;max-height:54px}
+.organizer-card h3{font:700 19px/1.45 var(--serif);color:var(--ink);margin:0}
+.organizer-unit{margin:10px 0 0;font:500 15.5px/1.55 var(--sans);color:var(--muted)}
+.organizer-unit span{color:var(--red);margin-right:5px}
+.organizer-sponsorship{margin-top:22px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:24px;font:400 15px/1.6 var(--sans);color:var(--muted)}
+.organizer-sponsorship p{margin:0}
+.organizer-sponsorship a{font-weight:600;text-decoration:none;white-space:nowrap}
+
 .cta-band{background:var(--navy);color:#fff;padding:34px 40px;display:flex;justify-content:space-between;align-items:center;gap:32px}
 .cta-band h3{color:#fff;font:700 20px var(--serif);margin:0 0 8px}
 .cta-band h2{color:#fff;font:700 20px var(--serif);margin:0 0 8px}
@@ -285,5 +301,10 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .form-grid{grid-template-columns:1fr}
   .form-field.full{grid-column:auto}
   .tier-card{padding:30px 22px}
+  .organizer-grid{grid-template-columns:1fr}
+  .organizer-card{padding:26px 22px;grid-template-rows:auto auto;gap:20px}
+  .organizer-logo{min-height:54px}
+  .organizer-sponsorship{align-items:flex-start;flex-direction:column;gap:8px}
+  .organizer-sponsorship a{white-space:normal}
   .cta-band{flex-direction:column;align-items:flex-start;padding:28px 24px}
 }
