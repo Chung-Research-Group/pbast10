@@ -28,6 +28,13 @@ assert.throws(
   /missing finite USD or KRW rates/
 );
 assert.throws(
+  () => parseEcbXml(
+    sample.replace("rate='1.1535'", "rate='-1'").replace("rate='1633.30'", "rate='-1415.951452'"),
+    new Date("2026-08-08T00:00:00Z")
+  ),
+  /outside safety bounds/
+);
+assert.throws(
   () => parseEcbXml(sample, new Date("2026-09-01T00:00:00Z")),
   /implausible or stale/
 );

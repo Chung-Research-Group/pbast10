@@ -145,8 +145,15 @@ else:
         elif exchange_rate["source"] != "European Central Bank":
             errors.append("data/exchange-rate.json: unexpected exchange-rate source")
         else:
-            expected_cross_rate = exchange_rate["sourceRates"]["KRW"] / exchange_rate["sourceRates"]["USD"]
-            if not math.isclose(exchange_rate["rate"], expected_cross_rate, rel_tol=1e-9):
+            usd = exchange_rate["sourceRates"]["USD"]
+            krw = exchange_rate["sourceRates"]["KRW"]
+            rate = exchange_rate["rate"]
+            values = (usd, krw, rate)
+            if not all(type(value) in (int, float) and math.isfinite(value) for value in values):
+                errors.append("data/exchange-rate.json: exchange-rate values must be finite numbers")
+            elif not (0.5 <= usd <= 2.5 and 500 <= krw <= 3000 and 500 <= rate <= 3000):
+                errors.append("data/exchange-rate.json: exchange-rate values are outside safety bounds")
+            elif not math.isclose(rate, krw / usd, rel_tol=1e-9):
                 errors.append("data/exchange-rate.json: USD/KRW cross-rate is inconsistent")
     except (json.JSONDecodeError, KeyError, TypeError, ZeroDivisionError) as exc:
         errors.append(f"data/exchange-rate.json: invalid data ({exc})")
