@@ -12,6 +12,7 @@ Live at https://pbast10.org
 index.html               Home (hero, welcome, dates, topics, call for abstracts, sponsors)
 speakers.html            Speakers & Committee (Plenary / Keynote / Invited / Committee tabs)
 registration.html        Fees & key dates
+data/exchange-rate.json  Latest ECB-derived USD/KRW reference rate
 abstract-submission.html Netlify abstract form with required file upload
 revise-abstract.html     Private token-based abstract review/revision form
 thank-you.html           Successful form-submission destination
@@ -23,10 +24,12 @@ sponsorship.html         Sponsorship tiers
 css/style.css            All styles (design tokens in :root)
 js/tabs.js               Tab switcher for speakers page
 js/mobile-nav.js         Accessible mobile navigation
+js/exchange-rate.js      KRW fee conversion from the daily reference-rate data
 js/revision-form.js      Secure revision lookup, prefill, and file validation
 netlify/functions/       Verified form submission -> Google Sheets sync
 google-apps-script/      Google Sheets web-app receiver and setup guide
 scripts/check_site.py    Static link, metadata, image, and structure checks
+scripts/update_exchange_rate.mjs  Daily ECB rate fetch and validation
 robots.txt / sitemap.xml Search-engine discovery files
 _headers                  Netlify security and cache headers
 404.html                  Netlify-compatible not-found page
@@ -43,6 +46,7 @@ Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
 - **Speaker photos** — drop images in `assets/speakers/` and update `speakers.html`.
 - **Abstract form** — fields and the PDF-only upload restriction are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB. The Netlify event handler and Apps Script receiver also validate the uploaded file metadata.
 - **Contact email** — in the footer of every page and on `sponsorship.html`.
+- **Exchange rate** — `.github/workflows/exchange-rate.yml` checks the official ECB reference rates daily at 16:30 UTC (01:30 KST) and updates both `data/exchange-rate.json` and the registration-page fallback when a new working-day rate is published. USD/KRW is calculated as EUR/KRW divided by EUR/USD; registration estimates are rounded to the nearest KRW 1,000.
 - **Pre-commit check** — run `python scripts/check_site.py`.
 
 ## Netlify
