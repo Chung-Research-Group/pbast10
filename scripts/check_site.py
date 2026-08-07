@@ -4,6 +4,8 @@
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+import json
+import math
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -107,6 +109,54 @@ for form_page in ("abstract-submission.html", "revise-abstract.html"):
 
 if not (ROOT / "js" / "autocomplete.js").exists():
     errors.append("js/autocomplete.js is missing")
+
+home_source = (ROOT / "index.html").read_text(encoding="utf-8")
+home_sections = ("Call for Abstracts", 'id="sponsors-title"', 'id="organized-by-title"')
+home_positions = [home_source.find(marker) for marker in home_sections]
+if any(position < 0 for position in home_positions):
+    errors.append("index.html: missing Call for Abstracts, Sponsors, or Organized by section")
+elif home_positions != sorted(home_positions):
+    errors.append("index.html: expected section order Call for Abstracts -> Sponsors -> Organized by")
+
+registration_source = (ROOT / "registration.html").read_text(encoding="utf-8")
+for marker in ("data-usd-fee", "data-krw-equivalent", "data-exchange-rate", "js/exchange-rate.js"):
+    if marker not in registration_source:
+        errors.append(f"registration.html: missing exchange-rate integration ({marker})")
+
+exchange_rate_path = ROOT / "data" / "exchange-rate.json"
+if not exchange_rate_path.exists():
+    errors.append("data/exchange-rate.json is missing")
+else:
+    try:
+        exchange_rate = json.loads(exchange_rate_path.read_text(encoding="utf-8"))
+        required_rate_fields = {
+            "baseCurrency",
+            "quoteCurrency",
+            "rate",
+            "effectiveDate",
+            "source",
+            "sourceUrl",
+            "sourceRates",
+        }
+        if not required_rate_fields.issubset(exchange_rate):
+            errors.append("data/exchange-rate.json: required fields are missing")
+        elif exchange_rate["baseCurrency"] != "USD" or exchange_rate["quoteCurrency"] != "KRW":
+            errors.append("data/exchange-rate.json: expected USD/KRW currencies")
+        elif exchange_rate["source"] != "European Central Bank":
+            errors.append("data/exchange-rate.json: unexpected exchange-rate source")
+        else:
+            usd = exchange_rate["sourceRates"]["USD"]
+            krw = exchange_rate["sourceRates"]["KRW"]
+            rate = exchange_rate["rate"]
+            values = (usd, krw, rate)
+            if not all(type(value) in (int, float) and math.isfinite(value) for value in values):
+                errors.append("data/exchange-rate.json: exchange-rate values must be finite numbers")
+            elif not (0.5 <= usd <= 2.5 and 500 <= krw <= 3000 and 500 <= rate <= 3000):
+                errors.append("data/exchange-rate.json: exchange-rate values are outside safety bounds")
+            elif not math.isclose(rate, krw / usd, rel_tol=1e-9):
+                errors.append("data/exchange-rate.json: USD/KRW cross-rate is inconsistent")
+    except (json.JSONDecodeError, KeyError, TypeError, ZeroDivisionError) as exc:
+        errors.append(f"data/exchange-rate.json: invalid data ({exc})")
 
 admin_entry = (ROOT / "admin" / "index.html").read_text(encoding="utf-8")
 admin_url = "https://pbast10-admin.drygchung.workers.dev/"

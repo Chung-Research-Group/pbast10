@@ -1,0 +1,48 @@
+name: Update USD-KRW reference rate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/exchange-rate.yml"
+      - "scripts/update_exchange_rate.mjs"
+  schedule:
+    # ECB publishes each working day's reference rates by about 16:00 CET/CEST.
+    # 16:30 UTC is 01:30 the following day in Korea and is safely after publication.
+    - cron: "30 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: exchange-rate-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fetch and validate ECB rates
+        run: node scripts/update_exchange_rate.mjs
+      - name: Run exchange-rate tests
+        run: node scripts/test_exchange_rate.mjs
+      - name: Validate updated site
+        run: python scripts/check_site.py
+      - name: Commit a newly published rate
+        shell: bash
+        run: |
+          if git diff --quiet -- data/exchange-rate.json registration.html; then
+            echo "The stored ECB reference rate is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/exchange-rate.json registration.html
+          git commit -m "Update USD-KRW reference rate"
+          git push

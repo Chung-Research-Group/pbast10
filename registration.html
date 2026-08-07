@@ -47,13 +47,13 @@
   <table class="fee-table registration-fees mb-14">
     <thead><tr><th scope="col">Category</th><th scope="col">Early-bird</th><th scope="col">Standard</th></tr></thead>
     <tbody>
-      <tr><th scope="row">Regular</th><td>USD 650<span class="fee-krw">≈ KRW 910,000</span></td><td>USD 900<span class="fee-krw">≈ KRW 1,260,000</span></td></tr>
-      <tr><th scope="row">Accompanying spouse</th><td>USD 200<span class="fee-krw">≈ KRW 280,000</span></td><td>USD 200<span class="fee-krw">≈ KRW 280,000</span></td></tr>
-      <tr><th scope="row">Student</th><td>USD 200<span class="fee-krw">≈ KRW 280,000</span></td><td>USD 550<span class="fee-krw">≈ KRW 770,000</span></td></tr>
+      <tr><th scope="row">Regular</th><td data-usd-fee="650">USD 650<span class="fee-krw" data-krw-equivalent>≈ KRW 920,000</span></td><td data-usd-fee="900">USD 900<span class="fee-krw" data-krw-equivalent>≈ KRW 1,274,000</span></td></tr>
+      <tr><th scope="row">Accompanying spouse</th><td data-usd-fee="200">USD 200<span class="fee-krw" data-krw-equivalent>≈ KRW 283,000</span></td><td data-usd-fee="200">USD 200<span class="fee-krw" data-krw-equivalent>≈ KRW 283,000</span></td></tr>
+      <tr><th scope="row">Student</th><td data-usd-fee="200">USD 200<span class="fee-krw" data-krw-equivalent>≈ KRW 283,000</span></td><td data-usd-fee="550">USD 550<span class="fee-krw" data-krw-equivalent>≈ KRW 779,000</span></td></tr>
     </tbody>
   </table>
   <div class="note registration-notes mb-52">
-    <div><strong>Exchange rate:</strong> Approximate KRW equivalents are based on USD 1 ≈ KRW 1,400. Final KRW amounts may vary with the exchange rate and payment processing.</div>
+    <div data-exchange-rate-note><strong>Reference exchange rate:</strong> <span data-exchange-rate>USD 1 ≈ KRW 1,416</span> (<a href="https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html" data-exchange-rate-source>European Central Bank</a>, <time datetime="2026-08-07" data-exchange-rate-date>August 7, 2026</time>). Approximate KRW equivalents are rounded to the nearest KRW 1,000 for reference only; final payment amounts may vary.</div>
     <div><strong>Regular:</strong> includes all sessions, meals, and conference excursion.</div>
     <div><strong>Accompanying spouse:</strong> available for the spouse of a registered participant; included activities will be announced with the registration portal.</div>
     <div><strong>Student:</strong> includes all sessions and meals (excursion requires an additional fee).</div>
@@ -88,5 +88,6 @@
 </footer>
 
 <script src="js/mobile-nav.js"></script>
+<script src="js/exchange-rate.js"></script>
 </body>
 </html>
