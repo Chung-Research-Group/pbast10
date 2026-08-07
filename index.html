@@ -36,7 +36,18 @@
       "addressCountry": "KR"
     }
   },
-  "organizer": {"@type": "Organization", "name": "PBAST10 Organizing Committee", "url": "https://pbast10.org/"}
+  "organizer": [
+    {
+      "@type": "Organization",
+      "name": "Department of Chemical & Biomolecular Engineering, Yonsei University — BK21 Four Educational Research Group",
+      "url": "https://chemeng.yonsei.ac.kr/"
+    },
+    {
+      "@type": "Organization",
+      "name": "The Korean Institute of Chemical Engineers — The Division of Separation Technology",
+      "url": "https://www.kiche.or.kr/"
+    }
+  ]
 }
 </script>
 </head>
@@ -126,15 +137,38 @@
   </div>
 </div>
 
-<div class="page" style="padding-top:0;padding-bottom:64px">
+<section class="page organizer-section" aria-labelledby="organized-by-title">
   <div class="divider-top">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:24px;margin-bottom:28px">
-      <h2 class="section-title" style="margin:0">Sponsors</h2>
-      <a href="sponsorship.html" style="font:600 15px var(--sans);text-decoration:none">Become a sponsor →</a>
+    <div class="organizer-heading">
+      <p class="kicker">Joint organizers</p>
+      <h2 class="section-title" id="organized-by-title">Organized by</h2>
     </div>
-    <p class="prose" style="margin:0">Sponsorship opportunities are available. Confirmed partners will be recognized here.</p>
+    <div class="organizer-grid">
+      <article class="organizer-card">
+        <div class="organizer-logo">
+          <img src="assets/logo/yonsei-cbe.svg" alt="Yonsei University Department of Chemical and Biomolecular Engineering" width="328" height="54">
+        </div>
+        <div>
+          <h3>Department of Chemical &amp; Biomolecular Engineering, Yonsei University</h3>
+          <p class="organizer-unit"><span aria-hidden="true">—</span> BK21 Four Educational Research Group</p>
+        </div>
+      </article>
+      <article class="organizer-card">
+        <div class="organizer-logo">
+          <img src="assets/logo/kiche.svg" alt="The Korean Institute of Chemical Engineers (KIChE)" width="260" height="40">
+        </div>
+        <div>
+          <h3>The Korean Institute of Chemical Engineers (KIChE)</h3>
+          <p class="organizer-unit"><span aria-hidden="true">—</span> The Division of Separation Technology</p>
+        </div>
+      </article>
+    </div>
+    <div class="organizer-sponsorship">
+      <p>Sponsorship opportunities are available for organizations supporting PBAST10.</p>
+      <a href="sponsorship.html">View sponsorship opportunities →</a>
+    </div>
   </div>
-</div>
+</section>
 
 </main>
 
