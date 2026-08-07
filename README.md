@@ -29,15 +29,18 @@ js/revision-form.js      Secure revision lookup, prefill, and file validation
 netlify/functions/       Verified form submission -> Google Sheets sync
 google-apps-script/      Google Sheets web-app receiver and setup guide
 scripts/check_site.py    Static link, metadata, image, and structure checks
+scripts/update_footer_date.mjs  Build-time KST footer-date stamp
 scripts/update_exchange_rate.mjs  Daily ECB rate fetch and validation
+netlify.toml              Netlify build command and publish directory
 robots.txt / sitemap.xml Search-engine discovery files
 _headers                  Netlify security and cache headers
 404.html                  Netlify-compatible not-found page
 assets/                   Images, local fonts, speakers, committee, and logo
 ```
 
-Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
-(Netlify, GitHub Pages, Cloudflare Pages) at this folder.
+Plain static HTML/CSS/JS with one dependency-free build step. Netlify stamps every
+public footer with the deployed Git commit date in Korea time, then publishes this folder.
+Other static hosts should run `node scripts/update_footer_date.mjs` before publishing.
 
 ## Editing notes
 
@@ -46,8 +49,9 @@ Plain static HTML/CSS/JS — no build step. Deploy by pointing any static host
 - **Speaker photos** — drop images in `assets/speakers/` and update `speakers.html`.
 - **Abstract form** — fields and the PDF-only upload restriction are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB. The Netlify event handler and Apps Script receiver also validate the uploaded file metadata.
 - **Contact email** — in the footer of every page and on `sponsorship.html`.
+- **Footer date** — keep the `data-site-updated` marker in each public footer. Netlify replaces its fallback date with the deployed commit date in `Asia/Seoul` on every build.
 - **Exchange rate** — `.github/workflows/exchange-rate.yml` checks the official ECB reference rates daily at 16:30 UTC (01:30 KST) and updates both `data/exchange-rate.json` and the registration-page fallback when a new working-day rate is published. USD/KRW is calculated as EUR/KRW divided by EUR/USD; registration estimates are rounded to the nearest KRW 1,000.
-- **Pre-commit check** — run `python scripts/check_site.py`.
+- **Pre-commit checks** — run `python scripts/check_site.py` and `node scripts/test_footer_date.mjs`.
 
 ## Netlify
 
