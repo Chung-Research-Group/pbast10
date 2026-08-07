@@ -196,28 +196,22 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .logo-slot{background:#fff;border:1px dashed var(--chip-border);display:flex;align-items:center;justify-content:center;font:500 13px var(--sans);color:var(--faint)}
 
 /* homepage organizers */
-.organizer-section{padding-top:0;padding-bottom:64px}
-.organizer-layout{display:grid;grid-template-columns:210px minmax(0,1fr);column-gap:48px;align-items:start}
-.organizer-heading{padding-top:8px}
-.organizer-heading .kicker{margin-bottom:8px}
+.organizer-section{padding-top:0;padding-bottom:56px}
+.organizer-heading{margin-bottom:22px}
 .organizer-heading .section-title{margin:0}
-.organizer-list{border-top:2px solid var(--navy);border-bottom:1px solid var(--line)}
-.organizer-row{min-height:122px;padding:26px 10px;display:grid;grid-template-columns:minmax(260px,.9fr) minmax(340px,1.1fr);gap:48px;align-items:center}
-.organizer-row+.organizer-row{border-top:1px solid var(--line)}
-.organizer-logo{display:flex;align-items:center;min-width:0}
+.organizer-grid{border-top:2px solid var(--navy);padding-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:64px}
+.organizer-item{min-width:0;text-align:center}
+.organizer-logo{height:64px;display:flex;align-items:center;justify-content:center}
 .organizer-logo img{display:block;width:auto;max-width:100%;height:auto}
-.organizer-logo-yonsei{justify-content:flex-start}
 .organizer-logo-yonsei img{max-height:54px}
-.organizer-logo-kiche{justify-content:flex-end}
 .organizer-logo-kiche img{max-height:46px}
-.organizer-details h3{font:700 18px/1.4 var(--serif);color:var(--ink);margin:0}
-.organizer-details>p{margin:4px 0 0;font:500 15px/1.45 var(--sans);color:var(--muted)}
-.organizer-details .organizer-abbreviation{font-weight:600;color:var(--navy);letter-spacing:.04em}
-.organizer-details .organizer-unit{margin-top:11px;padding-top:9px;border-top:1px solid var(--line2);font-size:14.5px;color:var(--body)}
-.organizer-row-kiche .organizer-details{text-align:right}
-.organizer-sponsorship{grid-column:2;margin-top:18px;display:flex;justify-content:space-between;align-items:baseline;gap:24px;font:400 14.5px/1.6 var(--sans);color:var(--muted)}
-.organizer-sponsorship p{margin:0}
-.organizer-sponsorship a{font-weight:600;text-decoration:none;white-space:nowrap}
+.organizer-item p{margin:18px 0 0;font:500 15.5px/1.5 var(--sans);color:var(--body)}
+
+.sponsor-section{padding-top:0;padding-bottom:56px}
+.sponsor-layout{display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:40px;align-items:center}
+.sponsor-layout .section-title{margin:0}
+.sponsor-layout p{margin:0;font:400 15.5px/1.65 var(--sans);color:var(--muted)}
+.abstract-cta{padding-top:0;padding-bottom:64px}
 
 .cta-band{background:var(--navy);color:#fff;padding:34px 40px;display:flex;justify-content:space-between;align-items:center;gap:32px}
 .cta-band h3{color:#fff;font:700 20px var(--serif);margin:0 0 8px}
@@ -279,10 +273,7 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
 }
 
 @media (max-width:1060px) and (min-width:821px){
-  .organizer-layout{grid-template-columns:1fr}
-  .organizer-heading{padding-top:0;margin-bottom:24px}
-  .organizer-row{grid-template-columns:minmax(220px,.9fr) minmax(280px,1.1fr);gap:32px}
-  .organizer-sponsorship{grid-column:1}
+  .sponsor-layout{grid-template-columns:180px minmax(0,1fr) auto;gap:28px}
 }
 
 @media (max-width:820px){
@@ -316,14 +307,11 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .form-grid{grid-template-columns:1fr}
   .form-field.full{grid-column:auto}
   .tier-card{padding:30px 22px}
-  .organizer-layout{grid-template-columns:1fr}
-  .organizer-heading{padding-top:0;margin-bottom:22px}
-  .organizer-row{min-height:0;padding:24px 0;grid-template-columns:1fr;gap:18px}
-  .organizer-logo{min-height:46px;justify-content:flex-start}
-  .organizer-row-kiche .organizer-logo{grid-row:1}
-  .organizer-row-kiche .organizer-details{grid-row:2;text-align:left}
-  .organizer-details .organizer-unit{max-width:420px}
-  .organizer-sponsorship{grid-column:1;align-items:flex-start;flex-direction:column;gap:8px}
-  .organizer-sponsorship a{white-space:normal}
+  .organizer-heading{margin-bottom:18px}
+  .organizer-grid{grid-template-columns:1fr;gap:30px;padding-top:28px}
+  .organizer-logo{height:58px}
+  .organizer-item p{margin-top:13px}
+  .sponsor-layout{grid-template-columns:1fr;gap:14px;align-items:start}
+  .sponsor-layout .btn{justify-self:start}
   .cta-band{flex-direction:column;align-items:flex-start;padding:28px 24px}
 }
