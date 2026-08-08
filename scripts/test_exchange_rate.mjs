@@ -51,9 +51,19 @@ const registration = await readFile(resolve("registration.html"), "utf8");
 assert.equal(renderRegistrationFallback(registration, stored), registration);
 const feeRows = [...registration.matchAll(/data-usd-fee="(\d+)"[^>]*>USD \d+<span class="fee-krw" data-krw-equivalent>([^<]+)<\/span>/g)];
 assert.equal(feeRows.length, 6);
+assert.deepEqual(
+  feeRows.map(([, rawUsd]) => Number(rawUsd)),
+  [650, 800, 400, 450, 200, 200]
+);
 for (const [, rawUsd, displayedKrw] of feeRows) {
   const roundedKrw = Math.round((Number(rawUsd) * stored.rate) / 1000) * 1000;
   assert.equal(displayedKrw, `≈ KRW ${roundedKrw.toLocaleString("en-US")}`);
+}
+for (const requiredText of [
+  "All conference sessions, lunches, the Welcome Reception, and the Gala Dinner (Banquet) are included.",
+  "Includes the Welcome Reception, Gala Dinner (Banquet), and conference tour;"
+]) {
+  assert.ok(registration.includes(requiredText), `Missing registration inclusion: ${requiredText}`);
 }
 
 console.log("Exchange-rate calculation tests passed.");
