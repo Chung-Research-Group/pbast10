@@ -138,6 +138,15 @@ if any(position < 0 for position in home_positions):
 elif home_positions != sorted(home_positions):
     errors.append("index.html: expected section order Call for Abstracts -> Sponsors -> Organized by")
 
+venue_source = (ROOT / "venue.html").read_text(encoding="utf-8")
+english_map_src = (
+    'src="https://maps.google.com/maps?'
+    'q=Baekyangnuri%20The%20Commons%2C%20Yonsei%20University%2C%20Seoul'
+    '&amp;hl=en'
+)
+if english_map_src not in venue_source:
+    errors.append("venue.html: Google Maps embed must explicitly use English (hl=en)")
+
 registration_source = (ROOT / "registration.html").read_text(encoding="utf-8")
 for marker in ("data-usd-fee", "data-krw-equivalent", "data-exchange-rate", "js/exchange-rate.js"):
     if marker not in registration_source:
