@@ -134,6 +134,16 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .speaker-meta{padding-top:18px}
 .speaker-profile .name{font:700 23px/1.25 var(--serif);color:var(--ink);margin:0}
 .speaker-profile .aff{font:400 15px/1.55 var(--sans);color:var(--muted);margin:8px 0 0}
+.aff .dept{display:block;color:var(--ink);font-weight:500}
+
+/* committee directory */
+.committee-columns{align-items:start}
+.committee-rows{font-size:15.5px}
+.committee-rows .row{display:grid;grid-template-columns:178px minmax(0,1fr);align-items:start;gap:22px;padding:15px 0}
+.committee-rows .row .committee-name{color:var(--ink);font-weight:600;line-height:1.5}
+.committee-rows .person-aff{display:grid;gap:4px;min-width:0;text-align:left;color:var(--muted);line-height:1.5}
+.committee-rows .person-aff .dept{display:block;color:var(--ink);font-weight:500}
+.committee-rows .person-aff .institution{display:block;color:var(--muted)}
 .speaker-bio{border-left:1px solid var(--line2);padding-left:38px;align-self:stretch}
 .speaker-bio h3{font:700 18px var(--serif);color:var(--navy);margin:0 0 12px}
 .speaker-bio p{margin:0;font:400 15.5px/1.72 var(--sans);color:var(--body);text-wrap:pretty}
@@ -278,6 +288,10 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .sponsor-layout{grid-template-columns:180px minmax(0,1fr) auto;gap:28px}
 }
 
+@media (max-width:1050px) and (min-width:821px){
+  .committee-columns{grid-template-columns:1fr}
+}
+
 @media (max-width:820px){
   .grid-2,.grid-3{grid-template-columns:1fr!important}
   .page{padding:40px 22px}
@@ -300,6 +314,7 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .fee-table th,.fee-table td{padding:10px 8px}
   .fee-table .fee-krw{font-size:11.5px;white-space:normal}
   .chair-card{flex-direction:column;align-items:flex-start;padding:26px 22px;gap:18px}
+  .committee-rows .row{grid-template-columns:1fr;gap:6px}
   .tabs{flex-wrap:wrap}
   .tabs a{padding:10px 14px;font-size:14px}
   .speaker-profile{grid-template-columns:1fr;gap:24px;padding:22px}
