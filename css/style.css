@@ -124,24 +124,21 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .placeholder-card p:last-child{margin:0;font:400 16px var(--sans);color:var(--muted)}
 .invited-placeholder{max-width:none}
 
-/* speaker cards */
-.speaker-card{background:#fff;border:1px solid var(--line);overflow:hidden}
-.speaker-card .photo{aspect-ratio:1/1;background:#dfe8f1;overflow:hidden}
-.speaker-card .photo img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-.speaker-card .info{padding:22px 26px;border-top:3px solid var(--navy)}
-.speaker-card .name{font:700 20px var(--serif);color:var(--ink)}
-.speaker-card .aff{font:400 15.5px/1.55 var(--sans);color:var(--muted);margin-top:6px}
-.aff .dept,.person-aff .dept{display:block;color:var(--ink);font-weight:500}
-.person-aff{display:block;text-align:right;color:var(--muted);line-height:1.45}
-
-.keynote-grid{gap:18px}
-.keynote-card{height:100%;background:#fff;border:1px solid var(--line);padding:20px;display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:20px}
-.keynote-card .keynote-photo{width:96px;height:96px;border-radius:50%;object-fit:cover;object-position:top;display:block;border:1px solid var(--line);background:#dfe8f1}
-.keynote-card .keynote-photo.placeholder{display:grid;place-items:center;background:#edf3f8;color:var(--navy);font:700 22px var(--serif);letter-spacing:.06em}
-.keynote-card .keynote-details{min-width:0}
-.keynote-card .name{display:block;font:700 18px var(--serif);color:var(--ink)}
-.keynote-card .aff{display:block;font:400 15px/1.5 var(--sans);color:var(--muted);margin-top:5px}
-.keynote-card .aff .dept{display:block;color:var(--ink);font-weight:500}
+/* speaker profiles */
+.speaker-profile-list{display:flex;flex-direction:column;gap:26px}
+.speaker-profile{display:grid;grid-template-columns:minmax(220px,260px) minmax(0,1fr);gap:38px;background:#fff;border:1px solid var(--line);border-top:3px solid var(--navy);padding:28px}
+.speaker-identity{min-width:0}
+.speaker-portrait{width:100%;aspect-ratio:4/5;background:#dfe8f1;overflow:hidden}
+.speaker-portrait img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.speaker-portrait.placeholder{display:grid;place-items:center;background:#edf3f8;color:var(--navy);font:700 54px var(--serif);letter-spacing:.06em}
+.speaker-meta{padding-top:18px}
+.speaker-profile .name{font:700 23px/1.25 var(--serif);color:var(--ink);margin:0}
+.speaker-profile .aff{font:400 15px/1.55 var(--sans);color:var(--muted);margin:8px 0 0}
+.speaker-bio{border-left:1px solid var(--line2);padding-left:38px;align-self:stretch}
+.speaker-bio h3{font:700 18px var(--serif);color:var(--navy);margin:0 0 12px}
+.speaker-bio p{margin:0;font:400 15.5px/1.72 var(--sans);color:var(--body);text-wrap:pretty}
+.speaker-bio p+p{margin-top:12px}
+.speaker-bio .bio-forthcoming{color:var(--muted);font-style:italic}
 
 .chair-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--navy);padding:40px;display:flex;gap:32px;align-items:center}
 .chair-card img{width:150px;height:150px;border-radius:50%;object-fit:cover;object-position:top;flex:none;border:1px solid var(--line)}
@@ -305,8 +302,12 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .chair-card{flex-direction:column;align-items:flex-start;padding:26px 22px;gap:18px}
   .tabs{flex-wrap:wrap}
   .tabs a{padding:10px 14px;font-size:14px}
-  .keynote-card{grid-template-columns:72px minmax(0,1fr);gap:15px;padding:18px}
-  .keynote-card .keynote-photo{width:72px;height:72px}
+  .speaker-profile{grid-template-columns:1fr;gap:24px;padding:22px}
+  .speaker-identity{display:grid;grid-template-columns:120px minmax(0,1fr);gap:18px;align-items:start}
+  .speaker-meta{padding-top:0}
+  .speaker-profile .name{font-size:21px}
+  .speaker-portrait.placeholder{font-size:34px}
+  .speaker-bio{border-left:0;border-top:1px solid var(--line2);padding:22px 0 0}
   .section-title,h2.sub{font-size:24px}
   .abstract-cta-layout{grid-template-columns:1fr;gap:18px;align-items:start}
   .abstract-cta-layout .btn{justify-self:start}
