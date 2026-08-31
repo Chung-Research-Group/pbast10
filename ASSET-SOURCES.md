@@ -6,12 +6,5 @@
 - `assets/fonts/*`: locally hosted subsets of IBM Plex Sans and Noto Serif KR downloaded from Google Fonts. Both families are distributed under the SIL Open Font License.
 - `assets/venue/baekyangnuri-the-commons.jpg`: user-provided photograph of Baekyangnuri (The Commons) at Yonsei University.
 - `assets/venue/baekyangnuri-walking-route.webp`: user-provided route map showing the walk from the Yonsei University main gate and nearby bus stop to Baekyangnuri.
-- `assets/accommodation/somerset-palace-seoul.webp`: Somerset Palace Seoul property photograph from [Yeogi](https://www.yeogi.com/domestic-accommodations/6950).
-- `assets/accommodation/h-avenue-idae-sinchon.webp`: H Avenue Hotel Idae Sinchon property photograph from [Agoda](https://www.agoda.com/en-gb/h-avenue-hotel-idae-sinchon/hotel/seoul-kr.html).
-- `assets/accommodation/hotel-the-designers-hongdae.webp`: Hotel The Designers Hongdae property photograph from [Travelnote](https://www.travelnote.kr/seoul/hotel/hotel_the_designers_hongdae).
-- `assets/accommodation/holiday-inn-express-seoul-hongdae.webp`: Holiday Inn Express Seoul Hongdae property photograph from the [official IHG gallery](https://www.ihg.com/holidayinnexpress/hotels/us/en/seoul/seohg/hoteldetail/gallery).
-- `assets/accommodation/l7-hongdae.webp`: L7 Hongdae property photograph from [Seoul Hotels](https://l7-hongdae.seoulhotelspage.com/en/).
-- `assets/accommodation/brown-suites-sinchon-central.webp`: Brown Suites Hotel Sinchon Central property photograph from [Vrbo](https://www.vrbo.com/en-ca/pdp/lo/101248299).
-- `assets/accommodation/ever8-serviced-residence.webp`: Ever8 Serviced Residence room photograph from the [official Ever8 site](https://www.ever8.co.kr/).
 
-No page hotlinks a third-party image. Local copies keep the venue and accommodation images available when external hosts or services are blocked; the originating gallery remains linked beside each hotel photograph.
+No page hotlinks a third-party image. The accommodation page uses official Google Maps embeds for hotel-location visuals because redistribution rights for hotel photographs have not been confirmed. Replace those maps with property photographs only after written permission or a compatible license is recorded here.
