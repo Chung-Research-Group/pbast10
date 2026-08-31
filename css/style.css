@@ -304,7 +304,8 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
 .campus-route{margin:0 0 56px;padding-top:6px}
 .campus-route-intro{display:grid;grid-template-columns:1fr 1fr;gap:42px;align-items:end;margin-bottom:22px}
 .campus-route-intro .section-title{margin-bottom:0}
-.campus-route-intro>p{margin:0;color:var(--body);font:400 15.5px/1.7 var(--sans)}
+.campus-route-copy>p{margin:0;color:var(--body);font:400 15.5px/1.7 var(--sans)}
+.campus-route-steps{margin:12px 0 0;padding-left:20px;color:var(--body);font:400 14.5px/1.65 var(--sans)}
 .campus-route-map{margin:0;border:1px solid var(--line);background:#fff}
 .campus-route-map img{display:block;width:100%;height:auto}
 .campus-route-map figcaption{padding:12px 16px;border-top:1px solid var(--line2);color:var(--muted);font:500 13.5px/1.5 var(--sans)}
