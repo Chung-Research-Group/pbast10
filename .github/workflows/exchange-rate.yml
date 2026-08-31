@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: exchange-rate-update
@@ -34,15 +35,36 @@ jobs:
         run: node scripts/test_exchange_rate.mjs
       - name: Validate updated site
         run: python scripts/check_site.py
-      - name: Commit a newly published rate
+      - name: Publish a newly released rate through a pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -euo pipefail
           if git diff --quiet -- data/exchange-rate.json registration.html; then
             echo "The stored ECB reference rate is already current."
             exit 0
           fi
+
+          effective_date=$(node -p "JSON.parse(require('fs').readFileSync('data/exchange-rate.json', 'utf8')).effectiveDate")
+          branch="automation/exchange-rate-${effective_date}"
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "An update branch already exists for ECB ${effective_date}; no duplicate PR will be created."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
           git add data/exchange-rate.json registration.html
-          git commit -m "Update USD-KRW reference rate"
-          git push
+          git commit -m "Update USD-KRW reference rate for ${effective_date}"
+          git push --set-upstream origin "$branch"
+
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "Update USD-KRW reference rate for ${effective_date}" \
+            --body "Automated update from the European Central Bank daily reference rates. The exchange-rate calculation, registration fallback values, and static site checks passed before this PR was created.")
+
+          gh pr merge "$pr_url" --squash --delete-branch
