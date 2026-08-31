@@ -147,6 +147,31 @@ english_map_src = (
 if english_map_src not in venue_source:
     errors.append("venue.html: Google Maps embed must explicitly use English (hl=en)")
 
+accommodation_source = (ROOT / "accommodation.html").read_text(encoding="utf-8")
+accommodation_hotels = (
+    "Somerset Palace Seoul",
+    "H Avenue Hotel Idae Sinchon",
+    "Hotel The Designers Hongdae",
+    "Holiday Inn Express Seoul Hongdae",
+    "L7 Hongdae",
+    "Brown Suites Sinchon Central",
+    "Ever8",
+)
+for hotel in accommodation_hotels:
+    if hotel not in accommodation_source:
+        errors.append(f"accommodation.html: missing hotel ({hotel})")
+if "somersetpalaceseoul.southkrhotel.com" in accommodation_source:
+    errors.append("accommodation.html: inactive Somerset reservation page must remain hidden")
+
+for path in HTML_FILES:
+    if path.name == "admin/index.html":
+        continue
+    source = path.read_text(encoding="utf-8")
+    if 'class="nav"' in source:
+        for marker in ('href="venue.html"', 'href="accommodation.html"'):
+            if marker not in source:
+                errors.append(f"{path.name}: split venue/accommodation navigation is incomplete ({marker})")
+
 registration_source = (ROOT / "registration.html").read_text(encoding="utf-8")
 for marker in ("data-usd-fee", "data-krw-equivalent", "data-exchange-rate", "js/exchange-rate.js"):
     if marker not in registration_source:
