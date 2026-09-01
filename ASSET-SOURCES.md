@@ -7,8 +7,8 @@
 - `assets/venue/baekyangnuri-the-commons.jpg`: user-provided photograph of Baekyangnuri (The Commons) at Yonsei University.
 - `assets/venue/baekyangnuri-walking-route.webp`: user-provided route map showing the walk from the Yonsei University main gate and nearby bus stop to Baekyangnuri.
 - `assets/accommodation/somerset-palace-seoul.webp`: Somerset Palace Seoul property photograph from [Yeogi](https://www.yeogi.com/domestic-accommodations/6950); the card links to the [official hotel website](https://www.discoverasr.com/en/somerset-serviced-residence/korea-south/somerset-palace-seoul).
-- `assets/accommodation/h-avenue-idae-sinchon.webp`: H Avenue Hotel Idae Sinchon property photograph from [Agoda](https://www.agoda.com/en-gb/h-avenue-hotel-idae-sinchon/hotel/seoul-kr.html).
-- `assets/accommodation/hotel-the-designers-hongdae.webp`: Hotel The Designers Hongdae property photograph from [Travelnote](https://www.travelnote.kr/seoul/hotel/hotel_the_designers_hongdae).
+- `assets/accommodation/h-avenue-idae-sinchon-room.webp`: H Avenue Hotel Idae Sinchon guest-room photograph from [Agoda](https://www.agoda.com/h-avenue-hotel-idae-sinchon/hotel/seoul-kr.html).
+- `assets/accommodation/hotel-the-designers-hongdae-room.webp`: Hotel The Designers Hongdae guest-room photograph from [Trip.com](https://th.trip.com/hotels/seoul-hotel-detail-1461063/hotel-the-designers-hongdae/).
 - `assets/accommodation/holiday-inn-express-seoul-hongdae.webp`: Holiday Inn Express Seoul Hongdae property photograph from the [official IHG gallery](https://www.ihg.com/holidayinnexpress/hotels/us/en/seoul/seohg/hoteldetail/gallery).
 - `assets/accommodation/l7-hongdae.webp`: L7 Hongdae property photograph from [Seoul Hotels](https://l7-hongdae.seoulhotelspage.com/en/); the card links to the [official hotel website](https://www.lottehotel.com/hongdae-l7/en).
 - `assets/accommodation/brown-suites-sinchon-central.webp`: Brown Suites Hotel Sinchon Central property photograph from [Vrbo](https://www.vrbo.com/en-ca/pdp/lo/101248299).
