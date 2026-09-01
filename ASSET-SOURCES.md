@@ -13,16 +13,4 @@
 - `assets/accommodation/l7-hongdae.webp`: L7 Hongdae property photograph from [Seoul Hotels](https://l7-hongdae.seoulhotelspage.com/en/); the card links to the [official hotel website](https://www.lottehotel.com/hongdae-l7/en).
 - `assets/accommodation/brown-suites-sinchon-central.webp`: Brown Suites Hotel Sinchon Central property photograph from [Vrbo](https://www.vrbo.com/en-ca/pdp/lo/101248299).
 - `assets/accommodation/ever8-serviced-residence.webp`: Ever8 Serviced Residence room photograph from the [official Ever8 site](https://www.ever8.co.kr/).
-- `assets/venue/restaurants/myeongmul-hwaro.webp`: Myeongmul Hwaro food photograph from [DiningCode](https://www.diningcode.com/profile.php?rid=BEOFaZhkIcV6).
-- `assets/venue/restaurants/yudak-story.webp`: Yudak Story Dakhanmari food photograph from [VisitKorea](https://tong.visitkorea.or.kr/cms/resource/01/2365701_image2_1.JPG).
-- `assets/venue/restaurants/pizza-mall.webp`: Pizza Mall Sinchon buffet photograph from [AutoReserve](https://autoreserve.com/en/restaurants/GdAU3WKsvsm9WAJGJtcL).
-- `assets/venue/restaurants/sosin-isso.webp`: Sosin Isso braised short-rib photograph from [Triple](https://triple.guide/restaurants/6d782d28-dbc8-4f87-84b1-dc601cbefc71).
-- `assets/venue/restaurants/manokamana.webp`: representative Manokamana curry-and-naan photograph from the Songdo location on [VisitKorea](https://english.visitkorea.or.kr/svc/contents/contentsView.do?vcontsId=138427); the venue card identifies it as a representative same-brand image rather than the Sinchon branch.
-- `assets/venue/restaurants/baeksojeong-sinchon.webp`: Baeksojeong Sinchon exterior photograph from [DiningCode](https://www.diningcode.com/profile.php?rid=i3dKO3GOaxqm).
-- `assets/venue/restaurants/dancing-hong-kong.webp`: Dancing Hong Kong Sinchon food photograph from [DiningCode](https://www.diningcode.com/profile.php?rid=SYDJMMa1NSvN).
-- `assets/venue/restaurants/loun-shabu.webp`: Loun Shabu-Shabu Sinchon salad-bar photograph from [DiningCode](https://www.diningcode.com/profile.php?rid=9PvJxKi8iAUJ).
-- `assets/venue/restaurants/dada.webp`: Dada food photograph from a January 2026 local review on [Brunch](https://brunch.co.kr/@6b3e30a48883437/3).
-- `assets/venue/restaurants/pho-ga-le.webp`: Pho Ga Le Sinchon food photograph from [DiningCode](https://www.diningcode.com/profile.php?rid=Br3Jr8AqDn1R).
-- `assets/venue/restaurants/plant-cafe.webp`: Plant Cafe Seoul (Yeonnam) food photograph from [Restaurant Guru](https://restaurantguru.com/Plant-Seoul-3).
-
-No page hotlinks a third-party image. The accommodation and restaurant photographs are resized editorial thumbnails that identify the listed properties or dishes and link back to their originating pages. Copyright remains with the respective owners; written redistribution permission has not yet been recorded and should be obtained for long-term use.
+No page hotlinks a third-party image. The accommodation photographs are resized editorial thumbnails that identify the listed properties and link back to their originating pages. Copyright remains with the respective owners; written redistribution permission has not yet been recorded and should be obtained for long-term use. Restaurant cards use original text-based directory marks rather than third-party photographs or official trademarks.
