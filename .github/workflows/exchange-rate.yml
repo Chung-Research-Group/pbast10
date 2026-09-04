@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -48,13 +49,23 @@ jobs:
 
           effective_date=$(node -p "JSON.parse(require('fs').readFileSync('data/exchange-rate.json', 'utf8')).effectiveDate")
           branch="automation/exchange-rate-${effective_date}"
+          pr_title="Update USD-KRW reference rate for ${effective_date}"
+          pr_body="Automated update from the European Central Bank daily reference rates. The exchange-rate calculation, registration fallback values, and static site checks passed before this PR was created."
+
+          create_pr() {
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "$pr_title" \
+              --body "$pr_body"
+          }
 
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             echo "Resuming the existing update branch for ECB ${effective_date}."
             pr_url=$(gh pr list --state open --head "$branch" --json url --jq '.[0].url')
             if [[ -z "$pr_url" ]]; then
-              echo "The update branch exists but has no open pull request." >&2
-              exit 1
+              echo "The update branch has no open pull request; creating the missing PR."
+              pr_url=$(create_pr)
             fi
             git fetch origin "$branch"
             head_sha=$(git rev-parse "origin/$branch")
@@ -67,11 +78,7 @@ jobs:
             git push --set-upstream origin "$branch"
             head_sha=$(git rev-parse HEAD)
 
-            pr_url=$(gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "Update USD-KRW reference rate for ${effective_date}" \
-              --body "Automated update from the European Central Bank daily reference rates. The exchange-rate calculation, registration fallback values, and static site checks passed before this PR was created.")
+            pr_url=$(create_pr)
           fi
 
           gh workflow run site-checks.yml --ref "$branch"

@@ -66,4 +66,21 @@ for (const requiredText of [
   assert.ok(registration.includes(requiredText), `Missing registration inclusion: ${requiredText}`);
 }
 
+const workflow = await readFile(resolve(".github/workflows/exchange-rate.yml"), "utf8");
+assert.match(
+  workflow,
+  /permissions:\n\s+actions: write\n\s+contents: write\n\s+pull-requests: write/,
+  "The updater must be able to dispatch and monitor the Site checks workflow"
+);
+assert.match(
+  workflow,
+  /if \[\[ -z "\$pr_url" \]\]; then\n\s+echo "The update branch has no open pull request; creating the missing PR\."\n\s+pr_url=\$\(create_pr\)/,
+  "An orphaned update branch must recreate its missing pull request"
+);
+assert.doesNotMatch(
+  workflow,
+  /The update branch exists but has no open pull request\." >&2/,
+  "A retry must not fail merely because the previous run pushed before PR creation"
+);
+
 console.log("Exchange-rate calculation tests passed.");
