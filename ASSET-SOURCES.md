@@ -14,3 +14,11 @@
 - `assets/accommodation/brown-suites-sinchon-central.webp`: Brown Suites Hotel Sinchon Central property photograph from [Vrbo](https://www.vrbo.com/en-ca/pdp/lo/101248299).
 - `assets/accommodation/ever8-serviced-residence.webp`: Ever8 Serviced Residence room photograph from the [official Ever8 site](https://www.ever8.co.kr/).
 No page hotlinks a third-party image. The accommodation photographs are resized editorial thumbnails that identify the listed properties and link back to their originating pages. Copyright remains with the respective owners; written redistribution permission has not yet been recorded and should be obtained for long-term use. Restaurant cards use original text-based directory marks rather than third-party photographs or official trademarks.
+
+
+## Organiser-supplied speaker update — 11 September 2026
+
+- Chang-Ha Lee: biography replaced using the supplied CV; existing portrait retained.
+- Suresh Bhatia: added to Keynote using the supplied biography and `Bhatia_07-09-26.jpg`; the original JPEG is stored as `assets/speakers/suresh-bhatia.jpg`.
+- Abdel Sayari: added to Invited using the supplied biosketch and `Sayari-Photo.jpg`; the original JPEG is stored as `assets/speakers/abdel-sayari.jpg`.
+- Materials were supplied for conference publication. Biographies received light grammar and HTML-formatting edits only; numerical claims, dates, honours, and fellowships follow the supplied texts.
