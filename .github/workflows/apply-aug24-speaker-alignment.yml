@@ -1,0 +1,53 @@
+name: Apply August 24 speaker alignment
+on:
+  push:
+    branches: [content/align-aug24-speaker-archive]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: content/align-aug24-speaker-archive
+      - name: Verify archive portraits and minimally align affiliation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          expected = {
+            'assets/speakers/katsumi-kaneko.webp':'3f388e85f303fbc776cb4527328fa75a3f2451eb',
+            'assets/speakers/dong-yeun-koh.webp':'25ec89b952bd921dae886570bda5af6d8e7d71ec',
+            'assets/speakers/donghui-zhang.webp':'3448c28504cf0c26e4c15d7b9301f727d078b72c',
+            'assets/speakers/guoping-hu.webp':'2d50ef168127b5c7ab7565fd83c6658be6cbed21',
+            'assets/speakers/song-li.webp':'db3c955f2122cfb7ebd2eb500b66d2f7b3eca39d',
+            'assets/speakers/li-chiang-lin.webp':'5307d268850b9134c1a6b8476d98e963a0af9198',
+            'assets/speakers/ronny-pini.webp':'5c298c53ed3d51c4949a44a154f4508cbfe2f76d',
+            'assets/speakers/jin-shang.webp':'1470fbe1126fd1399e2c4b3c9a937d7c59c7f773',
+            'assets/speakers/joaquin-silvestre-albero.webp':'6e97199d816273d42302ec6729e6b36fce39d10e',
+          }
+          for path, sha in expected.items():
+            actual = subprocess.check_output(['git','hash-object',path], text=True).strip()
+            assert actual == sha, f'Organizer portrait changed: {path}'
+          page = Path('speakers.html')
+          text = page.read_text(encoding='utf-8')
+          old = '<p class="aff"><span class="dept">Institute for Aqua Regeneration</span>Shinshu University, Japan</p>'
+          new = '<p class="aff"><span class="dept">Research Initiative for Supra-Materials</span>Shinshu University, Matsumoto, Japan</p>'
+          assert text.count(old) == 1
+          text = text.replace(old, new, 1)
+          page.write_text(text, encoding='utf-8')
+          PY
+          python scripts/check_site.py
+          node scripts/test_footer_date.mjs
+      - name: Keep PR content-only
+        run: |
+          rm .github/workflows/apply-aug24-speaker-alignment.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add speakers.html .github/workflows/apply-aug24-speaker-alignment.yml
+          git diff --cached --check
+          git commit -m 'Align speaker affiliation with August 24 organizer archive'
+          git push origin HEAD:content/align-aug24-speaker-archive
