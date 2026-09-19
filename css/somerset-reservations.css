@@ -1,4 +1,5 @@
 /* Reservation information: scoped to the Somerset accommodation page. */
+.accommodation-page .reservation-pending a{color:#fff;text-decoration:underline;text-underline-offset:3px}
 .somerset-reservations{margin-top:36px}
 .somerset-reservations .reservation-intro{max-width:860px}
 .somerset-reservations .reservation-downloads{margin:22px 0 28px}
