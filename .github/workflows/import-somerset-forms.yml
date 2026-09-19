@@ -1,0 +1,48 @@
+name: Import Somerset reservation forms
+on:
+  push:
+    branches: [update/somerset-only-accommodation]
+    paths: [.github/workflows/import-somerset-forms.yml]
+permissions:
+  contents: write
+jobs:
+  import-forms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: update/somerset-only-accommodation
+      - name: Download and verify original blank reservation forms
+        env:
+          SOURCE_URL: 'https://sdmntprkoreacentral.oaiusercontent.com/files/00000000-c888-8206-bcad-5b06bc8f815a/raw?se=2026-09-19T16%3A49%3A46Z&sp=r&sv=2026-02-06&sr=b&scid=c4a65b6a-dbb7-563a-b79d-502b4d4bb7db&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T02%3A23%3A42Z&ske=2026-09-20T02%3A23%3A42Z&sks=b&skv=2026-02-06&sig=lM81Zy3askYjmy0wmP1rmtHRJRnZ2D7i39hjEPLYMck%3D'
+        run: |
+          python3 - <<'PY'
+          import hashlib, io, os, pathlib, urllib.request, zipfile
+          with urllib.request.urlopen(os.environ['SOURCE_URL'], timeout=60) as response:
+              archive = response.read(2000000)
+          assert hashlib.sha256(archive).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive checksum mismatch'
+          expected = {
+              'docx': 'd2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091',
+              'pdf': '0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',
+          }
+          folder = pathlib.Path('assets/documents')
+          folder.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(io.BytesIO(archive)) as source:
+              for extension, digest in expected.items():
+                  name = f'[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.{extension}'
+                  data = source.read(name)
+                  assert hashlib.sha256(data).hexdigest() == digest, f'{extension} checksum mismatch'
+                  target = folder / f'PBAST10_Somerset_Palace_Reservation_Form_2027.{extension}'
+                  target.write_bytes(data)
+                  print(f'Verified {target}: {len(data)} bytes; SHA-256 {digest}')
+          PY
+      - name: Commit verified documents to working branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.pdf assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.docx
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add original Somerset PBAST10 reservation forms (PDF and DOCX)'
+            git push origin HEAD:update/somerset-only-accommodation
+          fi
