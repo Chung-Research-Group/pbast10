@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 684c467f8e767c4563c155b202902a8aaac23d16
+          ref: ff71a16ce146ca93e7d58bbacdb4a46cfc169743
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -23,52 +23,53 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/pbast-qa" --no-audit --no-fund playwright@1.55.0
           "$RUNNER_TEMP/pbast-qa/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Verify mobile and desktop layout and form downloads
+      - name: Verify final Netlify preview and original form downloads
         env:
           NODE_PATH: ${{ runner.temp }}/pbast-qa/node_modules
         shell: bash
         run: |
           mkdir -p qa-evidence
-          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/pbast-http.log 2>&1 &
-          trap 'kill $!' EXIT
           node <<'JS'
           const { chromium } = require('playwright');
           const assert = require('node:assert/strict');
           const fs = require('node:fs');
           const crypto = require('node:crypto');
           (async () => {
+            const base = 'https://deploy-preview-91--pbast10-pacific-basin-conference-on-adso-cd-cb27cc3e73.netlify.app';
             const browser = await chromium.launch();
             const errors = [];
             const observations = [];
-            const context = await browser.newContext({acceptDownloads: true});
+            const context = await browser.newContext({acceptDownloads:true});
             const page = await context.newPage();
             page.on('pageerror', error => errors.push(error.message));
-            for (const width of [390, 768, 1440]) {
-              await page.setViewportSize({width, height: 1000});
-              await page.goto('http://127.0.0.1:8765/accommodation.html', {waitUntil:'networkidle'});
-              await page.evaluate(() => document.fonts.ready);
-              assert.equal(await page.locator('h1').innerText(), 'Somerset Palace Seoul');
-              assert.equal(await page.locator('.hotel-card').count(), 0);
-              assert.equal(await page.locator('.reservation-downloads a').count(), 2);
+            for (const width of [390,768,1440]) {
+              await page.setViewportSize({width,height:1000});
+              const response = await page.goto(base+'/accommodation.html',{waitUntil:'networkidle'});
+              assert(response.ok());
+              await page.evaluate(()=>document.fonts.ready);
+              assert.equal(await page.locator('h1').innerText(),'Somerset Palace Seoul');
+              assert.equal(await page.locator('.hotel-card').count(),0);
+              assert.equal(await page.locator('.reservation-downloads a').count(),2);
               assert(await page.locator('a[href="mailto:christine.park@the-ascott.com"]').isVisible());
               assert(await page.locator('a[href="mailto:enquiry.seoul@the-ascott.com"]').isVisible());
-              const metrics = await page.evaluate(() => ({width:window.innerWidth, scroll:document.documentElement.scrollWidth, imageOk:[...document.images].every(i=>i.complete && i.naturalWidth > 0)}));
-              assert(metrics.scroll <= metrics.width + 1, 'Horizontal page overflow at '+width+'px: '+JSON.stringify(metrics));
-              assert(metrics.imageOk, 'Missing hotel image');
+              const metrics = await page.evaluate(()=>({width:window.innerWidth,scroll:document.documentElement.scrollWidth,imageOk:[...document.images].every(i=>i.complete&&i.naturalWidth>0),shortcutColor:getComputedStyle(document.querySelector('.reservation-pending a')).color}));
+              assert(metrics.scroll<=metrics.width+1,'Horizontal overflow: '+JSON.stringify(metrics));
+              assert(metrics.imageOk);
+              assert.equal(metrics.shortcutColor,'rgb(255, 255, 255)');
               await page.screenshot({path:'qa-evidence/accommodation-'+width+'.png',fullPage:true});
               observations.push(metrics);
             }
-            for (const [ext, expected] of Object.entries({pdf:'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3', docx:'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091'})) {
-              const wait = page.waitForEvent('download');
+            for(const [ext,expected] of Object.entries({pdf:'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',docx:'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091'})){
+              const wait=page.waitForEvent('download');
               await page.locator('.reservation-downloads a[href$=".'+ext+'"]').click();
-              const download = await wait;
-              assert.equal(await download.failure(), null);
-              const bytes = fs.readFileSync(await download.path());
-              assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), expected);
+              const download=await wait;
+              assert.equal(await download.failure(),null);
+              const bytes=fs.readFileSync(await download.path());
+              assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),expected);
               observations.push({form:ext,bytes:bytes.length,sha256:expected});
             }
-            assert.deepEqual(errors, []);
-            fs.writeFileSync('qa-evidence/results.json', JSON.stringify({status:'passed',observations,pageErrors:errors},null,2));
+            assert.deepEqual(errors,[]);
+            fs.writeFileSync('qa-evidence/results.json',JSON.stringify({status:'passed',base,sourceCommit:'ff71a16ce146ca93e7d58bbacdb4a46cfc169743',observations,pageErrors:errors},null,2));
             console.log(JSON.stringify(observations,null,2));
             await browser.close();
           })().catch(error=>{console.error(error);process.exit(1)});
@@ -76,6 +77,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: somerset-accommodation-browser-evidence
+          name: somerset-accommodation-final-preview
           path: qa-evidence
           retention-days: 3
