@@ -1,0 +1,22 @@
+/* Reservation information: scoped to the Somerset accommodation page. */
+.somerset-reservations{margin-top:36px}
+.somerset-reservations .reservation-intro{max-width:860px}
+.somerset-reservations .reservation-downloads{margin:22px 0 28px}
+.somerset-reservations .reservation-steps{margin:0 0 28px;padding-left:22px;line-height:1.8}
+.somerset-reservations .reservation-steps li+li{margin-top:7px}
+.somerset-reservations .reservation-contacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin:28px 0}
+.somerset-reservations .reservation-contact{min-width:0;border-top:2px solid var(--navy);padding-top:18px}
+.somerset-reservations .reservation-contact h3{margin:0 0 10px;font-size:20px}
+.somerset-reservations address{font:400 16px/1.8 var(--sans);font-style:normal}
+.somerset-reservations address a{overflow-wrap:anywhere}
+.somerset-reservations .reservation-dates{display:flex;flex-wrap:wrap;gap:16px 36px;margin:22px 0;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.somerset-reservations .reservation-dates div{min-width:0}
+.somerset-reservations .reservation-dates dt{font-size:14px;color:var(--muted)}
+.somerset-reservations .reservation-dates dd{margin:5px 0 0;color:var(--ink);font-weight:600}
+.somerset-reservations .reservation-note{margin:16px 0 0;max-width:920px;font-size:15px;line-height:1.75}
+@media(max-width:640px){
+  .somerset-reservations .reservation-contacts{grid-template-columns:1fr;gap:24px}
+  .somerset-reservations .reservation-downloads{flex-direction:column;align-items:stretch}
+  .somerset-reservations .reservation-downloads a{text-align:center}
+  .somerset-reservations .reservation-dates{display:grid;gap:16px}
+}

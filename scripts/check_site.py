@@ -5,10 +5,12 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 from datetime import date, datetime
+import hashlib
 import json
 import math
 import re
 import sys
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML_FILES = sorted(ROOT.glob("*.html"))
@@ -148,8 +150,10 @@ if english_map_src not in venue_source:
     errors.append("venue.html: Google Maps embed must explicitly use English (hl=en)")
 
 accommodation_source = (ROOT / "accommodation.html").read_text(encoding="utf-8")
-accommodation_hotels = (
-    "Somerset Palace Seoul",
+if "Somerset Palace Seoul" not in accommodation_source:
+    errors.append("accommodation.html: missing Somerset Palace Seoul")
+# The hotel and organizing committee requested a Somerset-only accommodation page.
+removed_accommodation_hotels = (
     "H Avenue Hotel Idae Sinchon",
     "Hotel The Designers Hongdae",
     "Holiday Inn Express Seoul Hongdae",
@@ -157,11 +161,50 @@ accommodation_hotels = (
     "Brown Suites Sinchon Central",
     "Ever8",
 )
-for hotel in accommodation_hotels:
-    if hotel not in accommodation_source:
-        errors.append(f"accommodation.html: missing hotel ({hotel})")
-if "somersetpalaceseoul.southkrhotel.com" in accommodation_source:
-    errors.append("accommodation.html: inactive Somerset reservation page must remain hidden")
+for hotel in removed_accommodation_hotels:
+    if hotel in accommodation_source:
+        errors.append(f"accommodation.html: removed hotel must not be listed ({hotel})")
+for marker in (
+    "Other recommended hotels", "Six additional hotels", "still being finalized",
+    "wait for the official PBAST10 reservation", "somersetpalaceseoul.southkrhotel.com",
+):
+    if marker in accommodation_source:
+        errors.append(f"accommodation.html: obsolete reservation content ({marker})")
+for marker in (
+    'mailto:christine.park@the-ascott.com', 'mailto:enquiry.seoul@the-ascott.com',
+    'tel:+82267308002', 'tel:+82267308888',
+    'datetime="2027-04-30"', 'datetime="2027-05-30"', 'datetime="2027-06-04"',
+    'css/somerset-reservations.css',
+):
+    if marker not in accommodation_source:
+        errors.append(f"accommodation.html: missing reservation information ({marker})")
+if not (ROOT / "css" / "somerset-reservations.css").exists():
+    errors.append("css/somerset-reservations.css is missing")
+# Originals supplied by the hotel; update these hashes only with replacement hotel forms.
+reservation_form_hashes = {
+    "pdf": "0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3",
+    "docx": "d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091",
+}
+for extension, expected_hash in reservation_form_hashes.items():
+    relative_path = f"assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.{extension}"
+    form_path = ROOT / relative_path
+    if f'href="{relative_path}" download' not in accommodation_source:
+        errors.append(f"accommodation.html: missing direct reservation form download ({extension})")
+    if not form_path.is_file():
+        errors.append(f"Missing original reservation form ({relative_path})")
+        continue
+    data = form_path.read_bytes()
+    if hashlib.sha256(data).hexdigest() != expected_hash:
+        errors.append(f"Reservation form differs from the hotel-supplied original ({extension})")
+    if extension == "pdf" and not data.startswith(b"%PDF-"):
+        errors.append("Somerset PDF form has an invalid file signature")
+    if extension == "docx":
+        try:
+            with zipfile.ZipFile(form_path) as document:
+                if "word/document.xml" not in document.namelist() or document.testzip() is not None:
+                    errors.append("Somerset Word form has an invalid document package")
+        except zipfile.BadZipFile:
+            errors.append("Somerset Word form is not a valid DOCX file")
 
 for path in HTML_FILES:
     if path.name == "admin/index.html":
