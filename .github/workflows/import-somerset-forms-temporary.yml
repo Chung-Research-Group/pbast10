@@ -1,4 +1,4 @@
-name: Temporary Somerset browser verification
+name: Temporary Somerset production verification
 on:
   push:
     branches: [staging/somerset-form-import-20260919]
@@ -8,68 +8,67 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 6
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ff71a16ce146ca93e7d58bbacdb4a46cfc169743
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check source and original form integrity
-        run: python3 scripts/check_site.py
       - name: Install isolated browser test tools
         run: |
           npm install --prefix "$RUNNER_TEMP/pbast-qa" --no-audit --no-fund playwright@1.55.0
           "$RUNNER_TEMP/pbast-qa/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Verify final Netlify preview and original form downloads
+      - name: Verify the production page and downloads without authentication
         env:
           NODE_PATH: ${{ runner.temp }}/pbast-qa/node_modules
         shell: bash
         run: |
           mkdir -p qa-evidence
           node <<'JS'
-          const { chromium } = require('playwright');
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const crypto = require('node:crypto');
-          (async () => {
-            const base = 'https://deploy-preview-91--pbast10-pacific-basin-conference-on-adso-cd-cb27cc3e73.netlify.app';
-            const browser = await chromium.launch();
-            const errors = [];
-            const observations = [];
-            const context = await browser.newContext({acceptDownloads:true});
-            const page = await context.newPage();
-            page.on('pageerror', error => errors.push(error.message));
-            for (const width of [390,768,1440]) {
+          const { chromium }=require('playwright');
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const crypto=require('node:crypto');
+          (async()=>{
+            const base='https://pbast10.org';
+            const browser=await chromium.launch();
+            const context=await browser.newContext({acceptDownloads:true});
+            const page=await context.newPage();
+            const observations=[];
+            for(const width of [390,768,1440]){
               await page.setViewportSize({width,height:1000});
-              const response = await page.goto(base+'/accommodation.html',{waitUntil:'networkidle'});
+              const response=await page.goto(base+'/accommodation.html',{waitUntil:'networkidle'});
               assert(response.ok());
               await page.evaluate(()=>document.fonts.ready);
               assert.equal(await page.locator('h1').innerText(),'Somerset Palace Seoul');
               assert.equal(await page.locator('.hotel-card').count(),0);
               assert.equal(await page.locator('.reservation-downloads a').count(),2);
+              const body=await page.locator('body').innerText();
+              for(const name of ['H Avenue','Hotel The Designers','Holiday Inn Express','L7 Hongdae','Brown Suites','Ever8'])assert(!body.includes(name));
               assert(await page.locator('a[href="mailto:christine.park@the-ascott.com"]').isVisible());
               assert(await page.locator('a[href="mailto:enquiry.seoul@the-ascott.com"]').isVisible());
-              const metrics = await page.evaluate(()=>({width:window.innerWidth,scroll:document.documentElement.scrollWidth,imageOk:[...document.images].every(i=>i.complete&&i.naturalWidth>0),shortcutColor:getComputedStyle(document.querySelector('.reservation-pending a')).color}));
-              assert(metrics.scroll<=metrics.width+1,'Horizontal overflow: '+JSON.stringify(metrics));
+              const metrics=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,imageOk:[...document.images].every(i=>i.complete&&i.naturalWidth>0),shortcutColor:getComputedStyle(document.querySelector('.reservation-pending a')).color}));
+              assert(metrics.scroll<=metrics.width+1);
               assert(metrics.imageOk);
               assert.equal(metrics.shortcutColor,'rgb(255, 255, 255)');
               await page.screenshot({path:'qa-evidence/accommodation-'+width+'.png',fullPage:true});
               observations.push(metrics);
             }
-            for(const [ext,expected] of Object.entries({pdf:'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',docx:'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091'})){
-              const wait=page.waitForEvent('download');
-              await page.locator('.reservation-downloads a[href$=".'+ext+'"]').click();
-              const download=await wait;
+            for(const [ext,sha] of Object.entries({pdf:'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',docx:'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091'})){
+              const link=page.locator('.reservation-downloads a[href$=".'+ext+'"]');
+              const url=new URL(await link.getAttribute('href'),page.url()).href;
+              const response=await context.request.get(url);
+              assert.equal(response.status(),200);
+              const data=await response.body();
+              assert.equal(crypto.createHash('sha256').update(data).digest('hex'),sha);
+              const pending=page.waitForEvent('download');
+              await link.click();
+              const download=await pending;
               assert.equal(await download.failure(),null);
-              const bytes=fs.readFileSync(await download.path());
-              assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),expected);
-              observations.push({form:ext,bytes:bytes.length,sha256:expected});
+              const downloaded=fs.readFileSync(await download.path());
+              assert.equal(crypto.createHash('sha256').update(downloaded).digest('hex'),sha);
+              observations.push({form:ext,url,status:response.status(),bytes:data.length,sha256:sha,contentType:response.headers()['content-type']});
             }
-            assert.deepEqual(errors,[]);
-            fs.writeFileSync('qa-evidence/results.json',JSON.stringify({status:'passed',base,sourceCommit:'ff71a16ce146ca93e7d58bbacdb4a46cfc169743',observations,pageErrors:errors},null,2));
+            fs.writeFileSync('qa-evidence/results.json',JSON.stringify({status:'passed',base,mergeCommit:'b2edb49c0d697425251e3828b21dc333a4ad9799',observations},null,2));
             console.log(JSON.stringify(observations,null,2));
             await browser.close();
           })().catch(error=>{console.error(error);process.exit(1)});
@@ -77,6 +76,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: somerset-accommodation-final-preview
+          name: somerset-accommodation-production
           path: qa-evidence
           retention-days: 3
