@@ -7,6 +7,7 @@ permissions:
   contents: write
 jobs:
   import:
+    if: github.actor == 'mtap-research'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -15,13 +16,18 @@ jobs:
           ref: review/somerset-only-reservations
       - name: Download and verify the exact organizer attachment
         env:
-          SOURCE_URL: 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-bb94-8209-89e9-32b4c199967d/raw?se=2026-09-19T16%3A50%3A53Z&sp=r&sv=2026-02-06&sr=b&scid=438dc6cf-260b-5666-800a-183321aae5c4&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T12%3A03%3A07Z&ske=2026-09-20T12%3A03%3A07Z&sks=b&skv=2026-02-06&sig=GfcdRI8p/d9XKYYsFrNhlbWek2NpK/gROEH1e%2B6Ca1U%3D'
+          SOURCE_URL: 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-55e0-8209-8168-33df03e81c9e/raw?se=2026-09-19T16%3A51%3A17Z&sp=r&sv=2026-02-06&sr=b&scid=a2a880cd-dc18-502f-aab7-7649a98be869&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T01%3A06%3A48Z&ske=2026-09-20T01%3A06%3A48Z&sks=b&skv=2026-02-06&sig=HSvYFpWSwHjr7KgG7fY7UVCcYeB7IxFnoCVLDeKfzss%3D'
         run: |
           python3 - <<'PY'
-          import hashlib, io, os, urllib.request, zipfile
+          import hashlib, io, os, urllib.request, urllib.error, zipfile
           from pathlib import Path
-          with urllib.request.urlopen(os.environ['SOURCE_URL'], timeout=60) as response:
-              data = response.read(2000000)
+          request = urllib.request.Request(os.environ['SOURCE_URL'], headers={'User-Agent': 'Mozilla/5.0'})
+          try:
+              with urllib.request.urlopen(request, timeout=60) as response:
+                  data = response.read(2000000)
+          except urllib.error.HTTPError as error:
+              print('Download response:', error.code, error.read(2000).decode('utf-8', errors='replace'))
+              raise SystemExit(1)
           assert hashlib.sha256(data).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive hash mismatch'
           expected = {
               'pdf': '0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',
