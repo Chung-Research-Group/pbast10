@@ -1,0 +1,107 @@
+/* Somerset reservation information; other public pages retain their existing styles. */
+.accommodation-page .featured-hotel {
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+}
+.accommodation-page .featured-hotel-copy { min-width: 0; }
+.accommodation-page .featured-hotel-copy .btn-outline {
+  margin-top: 8px;
+  border-color: #d9e6f3;
+  color: #fff;
+}
+.accommodation-page .featured-hotel-copy .btn-outline:hover {
+  background: rgba(255,255,255,.1);
+}
+.accommodation-page .reservation-section {
+  margin-top: 48px;
+  padding-top: 36px;
+  border-top: 1px solid var(--line);
+}
+.accommodation-page #somerset-reservation-title { scroll-margin-top: 150px; }
+.accommodation-page .reservation-downloads {
+  margin: 24px 0 14px;
+  align-items: stretch;
+  gap: 12px;
+}
+.accommodation-page .reservation-downloads .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  text-align: center;
+  line-height: 1.4;
+}
+.accommodation-page .reservation-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 26px 0;
+  padding: 22px 24px;
+  border-left: 4px solid var(--gold);
+  background: #fff8df;
+}
+.accommodation-page .reservation-dates dt {
+  margin-bottom: 7px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--body);
+}
+.accommodation-page .reservation-dates dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.accommodation-page .hotel-contacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.accommodation-page .hotel-contacts article { min-width: 0; }
+.accommodation-page .hotel-contacts h3 { line-height: 1.4; }
+.accommodation-page .hotel-contacts p {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.accommodation-page .hotel-contacts dl { margin: 0; }
+.accommodation-page .hotel-contacts dl > div {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.accommodation-page .hotel-contacts dt { color: var(--muted); }
+.accommodation-page .hotel-contacts dd { margin: 0; min-width: 0; }
+.accommodation-page .hotel-contacts a {
+  display: inline-block;
+  padding: 4px 0;
+  overflow-wrap: anywhere;
+}
+.accommodation-page .reservation-security { margin-top: 22px; line-height: 1.7; }
+.accommodation-page .hotel-rates { max-width: none; margin: 18px 0; }
+.accommodation-page .hotel-rates caption {
+  padding-bottom: 12px;
+  color: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: left;
+}
+.accommodation-page .hotel-rates tbody td { white-space: nowrap; }
+@media (max-width: 820px) {
+  .accommodation-page .featured-hotel { grid-template-columns: minmax(0, 1fr); }
+  .accommodation-page .hotel-contacts { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .accommodation-page #somerset-reservation-title { scroll-margin-top: 24px; }
+}
+@media (max-width: 560px) {
+  .accommodation-page .reservation-section { margin-top: 36px; padding-top: 28px; }
+  .accommodation-page .reservation-downloads { flex-direction: column; }
+  .accommodation-page .reservation-downloads .btn { width: 100%; }
+  .accommodation-page .reservation-dates { grid-template-columns: minmax(0, 1fr); padding: 18px; gap: 16px; }
+  .accommodation-page .hotel-contacts .card.pad { padding: 24px 20px; }
+  .accommodation-page .hotel-rates th, .accommodation-page .hotel-rates td { padding: 12px 10px; }
+  .accommodation-page .hotel-rates tbody th { overflow-wrap: anywhere; }
+}
