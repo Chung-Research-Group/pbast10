@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
 from datetime import date, datetime
+import hashlib
 import json
 import math
 import re
@@ -148,8 +149,9 @@ if english_map_src not in venue_source:
     errors.append("venue.html: Google Maps embed must explicitly use English (hl=en)")
 
 accommodation_source = (ROOT / "accommodation.html").read_text(encoding="utf-8")
-accommodation_hotels = (
-    "Somerset Palace Seoul",
+if "Somerset Palace Seoul" not in accommodation_source:
+    errors.append("accommodation.html: Somerset Palace Seoul is missing")
+removed_hotels = (
     "H Avenue Hotel Idae Sinchon",
     "Hotel The Designers Hongdae",
     "Holiday Inn Express Seoul Hongdae",
@@ -157,11 +159,57 @@ accommodation_hotels = (
     "Brown Suites Sinchon Central",
     "Ever8",
 )
-for hotel in accommodation_hotels:
-    if hotel not in accommodation_source:
-        errors.append(f"accommodation.html: missing hotel ({hotel})")
-if "somersetpalaceseoul.southkrhotel.com" in accommodation_source:
-    errors.append("accommodation.html: inactive Somerset reservation page must remain hidden")
+for hotel in removed_hotels:
+    if hotel in accommodation_source:
+        errors.append(f"accommodation.html: removed hotel listing remains ({hotel})")
+for retired_text in (
+    "somersetpalaceseoul.southkrhotel.com",
+    "Other recommended hotels",
+    "Six additional hotels",
+    "rates are planned",
+    "form will be posted",
+):
+    if retired_text in accommodation_source:
+        errors.append(f"accommodation.html: obsolete reservation information remains ({retired_text})")
+
+accommodation_parser = PageParser()
+accommodation_parser.feed(accommodation_source)
+for contact in (
+    "mailto:christine.park@the-ascott.com",
+    "mailto:enquiry.seoul@the-ascott.com",
+    "tel:+82267308002",
+    "tel:+82267308888",
+):
+    if contact not in accommodation_parser.links:
+        errors.append(f"accommodation.html: missing hotel contact link ({contact})")
+for marker in (
+    "Christine Park",
+    'datetime="2027-04-30"',
+    'datetime="2027-05-30"',
+    'datetime="2027-06-04"',
+    "KRW 210,000",
+    "KRW 220,000",
+    "KRW 250,000",
+    "10% VAT",
+):
+    if marker not in accommodation_source:
+        errors.append(f"accommodation.html: missing reservation detail ({marker})")
+# Originals supplied by the hotel. Update these checksums only with a reviewed replacement.
+reservation_forms = {
+    "pdf": "0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3",
+    "docx": "d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091",
+}
+for extension, expected_digest in reservation_forms.items():
+    form_path = f"assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.{extension}"
+    if form_path not in accommodation_parser.links:
+        errors.append(f"accommodation.html: missing reservation form link ({extension})")
+    file_path = ROOT / form_path
+    if not file_path.is_file():
+        errors.append(f"accommodation.html: missing reservation form file ({extension})")
+    elif hashlib.sha256(file_path.read_bytes()).hexdigest() != expected_digest:
+        errors.append(f"{form_path}: checksum differs from the supplied hotel original")
+if not (ROOT / "css" / "accommodation-reservations.css").is_file():
+    errors.append("css/accommodation-reservations.css is missing")
 
 for path in HTML_FILES:
     if path.name == "admin/index.html":
