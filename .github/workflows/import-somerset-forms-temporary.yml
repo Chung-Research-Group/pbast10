@@ -1,0 +1,44 @@
+name: Temporary Somerset form import
+on:
+  push:
+    branches: [staging/somerset-form-import-20260919]
+    paths: [.github/workflows/import-somerset-forms-temporary.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    if: github.repository == 'Chung-Research-Group/pbast10'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify published blank reservation forms and create binary blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, json, os, urllib.request, zipfile
+          # One-file, short-lived read URL for the blank forms authorized for publication.
+          # This staging workflow will not be merged into main.
+          source = 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-50b4-8209-8907-a9bfdb27284a/raw?se=2026-09-19T16%3A50%3A24Z&sp=r&sv=2026-02-06&sr=b&scid=7fbd6af4-31b3-5b38-8cd5-b7814f544cb4&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T00%3A27%3A40Z&ske=2026-09-20T00%3A27%3A40Z&sks=b&skv=2026-02-06&sig=9bLngkzS/VvqWwCrjs/g0vdALwurYdg11E8Xjml3zg0%3D'
+          with urllib.request.urlopen(source, timeout=45) as response:
+              archive = response.read(1048577)
+          assert len(archive) == 738307, 'Unexpected archive size'
+          assert hashlib.sha256(archive).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive integrity mismatch'
+          expected = {
+              'docx': ('d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091', '1e49fff3e46075cbe95c151393f93cc967d078ea'),
+              'pdf': ('0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3', '62fe6e6933dc98fcac07cb98fd442e69b4d0762d'),
+          }
+          with zipfile.ZipFile(io.BytesIO(archive)) as z:
+              assert len(z.infolist()) == 2
+              for ext, (sha256, blob_sha) in expected.items():
+                  data = z.read('[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.' + ext)
+                  assert hashlib.sha256(data).hexdigest() == sha256, 'Form integrity mismatch'
+                  assert hashlib.sha1(('blob ' + str(len(data)) + '\0').encode() + data).hexdigest() == blob_sha
+                  body = json.dumps({'content': base64.b64encode(data).decode(), 'encoding': 'base64'}).encode()
+                  request = urllib.request.Request('https://api.github.com/repos/Chung-Research-Group/pbast10/git/blobs', data=body, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
+                  with urllib.request.urlopen(request, timeout=45) as response:
+                      result = json.load(response)
+                  assert result['sha'] == blob_sha, 'GitHub blob mismatch'
+                  print(ext + ': verified ' + str(len(data)) + ' bytes; blob ' + blob_sha)
+          PY
