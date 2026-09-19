@@ -1,47 +1,81 @@
-name: Temporary Somerset form import
+name: Temporary Somerset browser verification
 on:
   push:
     branches: [staging/somerset-form-import-20260919]
     paths: [.github/workflows/import-somerset-forms-temporary.yml]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  import:
-    if: github.repository == 'Chung-Research-Group/pbast10'
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Verify original blank reservation forms and create binary blobs
+      - uses: actions/checkout@v4
+        with:
+          ref: 684c467f8e767c4563c155b202902a8aaac23d16
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source and original form integrity
+        run: python3 scripts/check_site.py
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pbast-qa" --no-audit --no-fund playwright@1.55.0
+          "$RUNNER_TEMP/pbast-qa/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Verify mobile and desktop layout and form downloads
         env:
-          GH_TOKEN: ${{ github.token }}
+          NODE_PATH: ${{ runner.temp }}/pbast-qa/node_modules
         shell: bash
         run: |
-          python3 - <<'PY'
-          import base64, hashlib, io, json, os, urllib.request, urllib.error, zipfile
-          source = 'https://sdmntprkoreacentral.oaiusercontent.com/files/00000000-4028-8206-9c66-8b7847e749ca/raw?se=2026-09-19T16%3A55%3A55Z&sp=r&sv=2026-02-06&sr=b&scid=6f1111ce-2531-5792-b9d0-cd519aa1cfbf&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T02%3A23%3A38Z&ske=2026-09-20T02%3A23%3A38Z&sks=b&skv=2026-02-06&sig=5HB93iYeK3ITkE7GfQIVDZqJTN9qDA19gp5HJoj4YUg%3D'
-          try:
-              with urllib.request.urlopen(urllib.request.Request(source, headers={'User-Agent': 'PBAST10-Website-Asset-Import/1.0'}), timeout=45) as response:
-                  archive = response.read(1048577)
-          except urllib.error.HTTPError as error:
-              print('Download HTTP status:', error.code)
-              print(error.read(2048).decode('utf-8', errors='replace'))
-              raise SystemExit(1)
-          assert len(archive) == 738307, 'Unexpected archive size'
-          assert hashlib.sha256(archive).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive integrity mismatch'
-          expected = {
-              'docx': ('d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091', '1e49fff3e46075cbe95c151393f93cc967d078ea'),
-              'pdf': ('0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3', '62fe6e6933dc98fcac07cb98fd442e69b4d0762d'),
-          }
-          with zipfile.ZipFile(io.BytesIO(archive)) as z:
-              assert len(z.infolist()) == 2
-              for ext, (sha256, blob_sha) in expected.items():
-                  data = z.read('[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.' + ext)
-                  assert hashlib.sha256(data).hexdigest() == sha256, 'Form integrity mismatch'
-                  assert hashlib.sha1(('blob ' + str(len(data)) + '\0').encode() + data).hexdigest() == blob_sha
-                  body = json.dumps({'content': base64.b64encode(data).decode(), 'encoding': 'base64'}).encode()
-                  request = urllib.request.Request('https://api.github.com/repos/Chung-Research-Group/pbast10/git/blobs', data=body, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
-                  with urllib.request.urlopen(request, timeout=45) as response:
-                      result = json.load(response)
-                  assert result['sha'] == blob_sha, 'GitHub blob mismatch'
-                  print(ext + ': verified ' + str(len(data)) + ' bytes; blob ' + blob_sha)
-          PY
+          mkdir -p qa-evidence
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/pbast-http.log 2>&1 &
+          trap 'kill $!' EXIT
+          node <<'JS'
+          const { chromium } = require('playwright');
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const crypto = require('node:crypto');
+          (async () => {
+            const browser = await chromium.launch();
+            const errors = [];
+            const observations = [];
+            const context = await browser.newContext({acceptDownloads: true});
+            const page = await context.newPage();
+            page.on('pageerror', error => errors.push(error.message));
+            for (const width of [390, 768, 1440]) {
+              await page.setViewportSize({width, height: 1000});
+              await page.goto('http://127.0.0.1:8765/accommodation.html', {waitUntil:'networkidle'});
+              await page.evaluate(() => document.fonts.ready);
+              assert.equal(await page.locator('h1').innerText(), 'Somerset Palace Seoul');
+              assert.equal(await page.locator('.hotel-card').count(), 0);
+              assert.equal(await page.locator('.reservation-downloads a').count(), 2);
+              assert(await page.locator('a[href="mailto:christine.park@the-ascott.com"]').isVisible());
+              assert(await page.locator('a[href="mailto:enquiry.seoul@the-ascott.com"]').isVisible());
+              const metrics = await page.evaluate(() => ({width:window.innerWidth, scroll:document.documentElement.scrollWidth, imageOk:[...document.images].every(i=>i.complete && i.naturalWidth > 0)}));
+              assert(metrics.scroll <= metrics.width + 1, 'Horizontal page overflow at '+width+'px: '+JSON.stringify(metrics));
+              assert(metrics.imageOk, 'Missing hotel image');
+              await page.screenshot({path:'qa-evidence/accommodation-'+width+'.png',fullPage:true});
+              observations.push(metrics);
+            }
+            for (const [ext, expected] of Object.entries({pdf:'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3', docx:'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091'})) {
+              const wait = page.waitForEvent('download');
+              await page.locator('.reservation-downloads a[href$=".'+ext+'"]').click();
+              const download = await wait;
+              assert.equal(await download.failure(), null);
+              const bytes = fs.readFileSync(await download.path());
+              assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), expected);
+              observations.push({form:ext,bytes:bytes.length,sha256:expected});
+            }
+            assert.deepEqual(errors, []);
+            fs.writeFileSync('qa-evidence/results.json', JSON.stringify({status:'passed',observations,pageErrors:errors},null,2));
+            console.log(JSON.stringify(observations,null,2));
+            await browser.close();
+          })().catch(error=>{console.error(error);process.exit(1)});
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: somerset-accommodation-browser-evidence
+          path: qa-evidence
+          retention-days: 3
