@@ -8,24 +8,42 @@ permissions:
 jobs:
   import-forms:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
           ref: update/somerset-only-accommodation
+      - name: Install browser for downloading and checking attachment
+        run: |
+          python3 -m pip install playwright
+          python3 -m playwright install --with-deps chromium
       - name: Download and verify original blank reservation forms
         env:
-          SOURCE_URL: 'https://sdmntpreastus.oaiusercontent.com/files/00000000-00e0-81f9-b1bd-9e04ad55b39e/raw?se=2026-09-19T16%3A59%3A00Z&sp=r&sv=2026-02-06&sr=b&scid=2fd990d2-4994-510f-812e-0c708497b274&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T01%3A07%3A03Z&ske=2026-09-20T01%3A07%3A03Z&sks=b&skv=2026-02-06&sig=WOGgECP%2B5xha9mZV%2BS98Z7x8kXwmfI4wtcBSomvN2aU%3D'
+          SOURCE_URL: 'https://sdmntprkoreacentral.oaiusercontent.com/files/00000000-1714-8206-a6d1-549abfd7f4d0/raw?se=2026-09-19T17%3A03%3A08Z&sp=r&sv=2026-02-06&sr=b&scid=75ab877b-6894-5d47-b99b-a2a7fc702ea0&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T06%3A31%3A57Z&ske=2026-09-20T06%3A31%3A57Z&sks=b&skv=2026-02-06&sig=ST648oqh0QkRIkf7aO6jXbGQ7%2BDQdTdYnfxhw0S7Jo8%3D'
         run: |
           python3 - <<'PY'
-          import hashlib, io, os, pathlib, urllib.request, urllib.error, zipfile
-          try:
-              with urllib.request.urlopen(os.environ['SOURCE_URL'], timeout=60) as response:
-                  archive = response.read(2000000)
-          except urllib.error.HTTPError as error:
-              print('HTTP status:', error.code)
-              print(error.read(4096).decode('utf-8', errors='replace'))
-              raise SystemExit(1)
+          import hashlib, io, os, pathlib, zipfile
+          from playwright.sync_api import sync_playwright, Error
+          path = pathlib.Path(os.environ['RUNNER_TEMP']) / 'somerset-original.zip'
+          with sync_playwright() as playwright:
+              browser = playwright.chromium.launch()
+              page = browser.new_page(accept_downloads=True)
+              try:
+                  with page.expect_download(timeout=60000) as download_info:
+                      try:
+                          response = page.goto(os.environ['SOURCE_URL'], wait_until='commit', timeout=60000)
+                          if response:
+                              print('Browser response status:', response.status)
+                              if response.status >= 400:
+                                  print(page.locator('body').inner_text()[:1000])
+                                  raise RuntimeError('Attachment service rejected the browser request')
+                      except Error as error:
+                          if 'ERR_ABORTED' not in str(error) and 'Download is starting' not in str(error):
+                              raise
+                  download_info.value.save_as(str(path))
+              finally:
+                  browser.close()
+          archive = path.read_bytes()
           assert hashlib.sha256(archive).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive checksum mismatch'
           expected = {
               'docx': 'd2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091',
@@ -35,13 +53,14 @@ jobs:
           folder.mkdir(parents=True, exist_ok=True)
           with zipfile.ZipFile(io.BytesIO(archive)) as source:
               for extension, digest in expected.items():
-                  name = f'[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.{extension}'
-                  data = source.read(name)
+                  data = source.read(f'[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.{extension}')
                   assert hashlib.sha256(data).hexdigest() == digest, f'{extension} checksum mismatch'
                   target = folder / f'PBAST10_Somerset_Palace_Reservation_Form_2027.{extension}'
                   target.write_bytes(data)
                   print(f'Verified {target}: {len(data)} bytes; SHA-256 {digest}')
           PY
+      - name: Run existing site validation
+        run: python3 scripts/check_site.py
       - name: Commit verified documents to working branch only
         run: |
           git config user.name 'github-actions[bot]'
