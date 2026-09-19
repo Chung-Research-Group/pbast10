@@ -1,0 +1,54 @@
+name: Import Somerset reservation forms (one-time)
+on:
+  push:
+    branches: [review/somerset-only-reservations]
+    paths: [.github/workflows/import-somerset-forms.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: review/somerset-only-reservations
+      - name: Download and verify the exact organizer attachment
+        env:
+          SOURCE_URL: 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-bb94-8209-89e9-32b4c199967d/raw?se=2026-09-19T16%3A50%3A53Z&sp=r&sv=2026-02-06&sr=b&scid=438dc6cf-260b-5666-800a-183321aae5c4&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T12%3A03%3A07Z&ske=2026-09-20T12%3A03%3A07Z&sks=b&skv=2026-02-06&sig=GfcdRI8p/d9XKYYsFrNhlbWek2NpK/gROEH1e%2B6Ca1U%3D'
+        run: |
+          python3 - <<'PY'
+          import hashlib, io, os, urllib.request, zipfile
+          from pathlib import Path
+          with urllib.request.urlopen(os.environ['SOURCE_URL'], timeout=60) as response:
+              data = response.read(2000000)
+          assert hashlib.sha256(data).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive hash mismatch'
+          expected = {
+              'pdf': '0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',
+              'docx': 'd2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091',
+          }
+          destination = Path('assets/documents')
+          destination.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(io.BytesIO(data)) as archive:
+              for ext, digest in expected.items():
+                  source = '[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.' + ext
+                  body = archive.read(source)
+                  assert hashlib.sha256(body).hexdigest() == digest, ext + ' hash mismatch'
+                  if ext == 'pdf':
+                      assert body.startswith(b'%PDF-'), 'Invalid PDF'
+                  else:
+                      with zipfile.ZipFile(io.BytesIO(body)) as document:
+                          assert 'word/document.xml' in document.namelist(), 'Invalid DOCX'
+                  target = destination / ('PBAST10_Somerset_Palace_Reservation_Form_2027.' + ext)
+                  target.write_bytes(body)
+                  print(str(target), len(body), digest)
+          PY
+      - name: Commit only the two original form files to the review branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.pdf assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.docx
+          if ! git diff --cached --quiet; then
+            git commit -m 'Import original PBAST10 Somerset reservation PDF and DOCX'
+            git push origin HEAD:review/somerset-only-reservations
+          fi
