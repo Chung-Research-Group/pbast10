@@ -1,0 +1,105 @@
+name: Import and verify supplied Chris Jones portrait
+on:
+  push:
+    branches: [content/chris-jones-portrait-20260919]
+    paths: [.github/workflows/import-chris-jones-portrait-once.yml]
+permissions:
+  contents: write
+jobs:
+  portrait:
+    if: github.repository == 'Chung-Research-Group/pbast10' && github.actor == 'mtap-research'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: content/chris-jones-portrait-20260919
+      - name: Import checksum-verified web image and update only its speaker entry
+        env:
+          SOURCE_URL: 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-8188-8209-84b7-a25644b64ca2/raw?se=2026-09-19T22%3A54%3A15Z&sp=r&sv=2026-02-06&sr=b&scid=8ad5d7b1-ab5c-5a0a-873b-880a288b433e&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T04%3A16%3A53Z&ske=2026-09-20T04%3A16%3A53Z&sks=b&skv=2026-02-06&sig=YtB8duKNHKJb9W9HLQK80waKRhn1DLFQIql2SlJhC3k%3D'
+        run: |
+          python3 - <<'PY'
+          import hashlib, os, pathlib, urllib.request
+          request = urllib.request.Request(os.environ['SOURCE_URL'], headers={'User-Agent': 'Mozilla/5.0'})
+          with urllib.request.urlopen(request, timeout=45) as response:
+              data = response.read(1000000)
+          assert len(data) == 238086, 'Unexpected image size'
+          assert hashlib.sha256(data).hexdigest() == 'af99a6576d081d7fc1343e2092aeb8d7c12af4d9db006ddfefa5e23676d228a9', 'Image integrity mismatch'
+          assert data[:4] == b'RIFF' and data[8:12] == b'WEBP', 'Invalid WebP'
+          destination = pathlib.Path('assets/speakers/chris-jones-20260919.webp')
+          destination.write_bytes(data)
+          path = pathlib.Path('speakers.html')
+          before = path.read_text(encoding='utf-8')
+          old = '<img src="assets/speakers/chris-jones.webp" alt="Jones, Christopher W." width="300" height="386" style="object-position:center 25%">'
+          new = '<img src="assets/speakers/chris-jones-20260919.webp" alt="Jones, Christopher W." width="800" height="1238" style="object-position:center 25%">'
+          assert before.count(old) == 1, 'Speaker entry changed; review before updating'
+          after = before.replace(old, new)
+          assert after.replace(new, old) == before, 'Unrelated speaker content changed'
+          path.write_text(after, encoding='utf-8')
+          for other in pathlib.Path('.').glob('*.html'):
+              assert 'assets/speakers/chris-jones.webp' not in other.read_text(encoding='utf-8'), 'Additional portrait reference needs review: ' + str(other)
+          print('Verified supplied image: 238086 bytes; 800 x 1238; SHA-256 af99a6576d081d7fc1343e2092aeb8d7c12af4d9db006ddfefa5e23676d228a9')
+          PY
+          python3 scripts/check_site.py
+      - name: Install isolated browser verification tools
+        run: |
+          python3 -m pip install playwright==1.55.0
+          python3 -m playwright install --with-deps chromium
+      - name: Verify image and responsive speaker card
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess, time
+          from playwright.sync_api import sync_playwright
+          out = pathlib.Path('portrait-qa')
+          out.mkdir(exist_ok=True)
+          server = subprocess.Popen(['python3', '-m', 'http.server', '8765', '--bind', '127.0.0.1'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+          observations, errors = [], []
+          try:
+              time.sleep(1)
+              with sync_playwright() as p:
+                  browser = p.chromium.launch()
+                  context = browser.new_context(viewport={'width': 1440, 'height': 1000})
+                  page = context.new_page()
+                  page.on('pageerror', lambda error: errors.append(str(error)))
+                  for width in (390, 768, 1440):
+                      page.set_viewport_size({'width': width, 'height': 1000})
+                      response = page.goto('http://127.0.0.1:8765/speakers.html', wait_until='networkidle')
+                      assert response.status == 200
+                      page.evaluate('document.fonts.ready')
+                      card = page.locator('article.speaker-profile').filter(has_text='Jones, Christopher W.')
+                      assert card.count() == 1
+                      image = card.locator('.speaker-portrait img')
+                      assert image.get_attribute('src') == 'assets/speakers/chris-jones-20260919.webp'
+                      assert image.is_visible()
+                      metrics = image.evaluate('(i) => ({loaded:i.complete && i.naturalWidth > 0, width:i.naturalWidth, height:i.naturalHeight, fit:getComputedStyle(i).objectFit, position:getComputedStyle(i).objectPosition})')
+                      assert metrics['loaded'] and metrics['width'] == 800 and metrics['height'] == 1238
+                      assert metrics['fit'] == 'cover'
+                      assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'Horizontal overflow at ' + str(width)
+                      card.screenshot(path=str(out / ('chris-jones-card-' + str(width) + '.png')))
+                      observations.append({'viewport': width, 'image': metrics, 'noHorizontalOverflow': True})
+                  result = context.request.get('http://127.0.0.1:8765/assets/speakers/chris-jones-20260919.webp')
+                  assert result.status == 200
+                  assert hashlib.sha256(result.body()).hexdigest() == 'af99a6576d081d7fc1343e2092aeb8d7c12af4d9db006ddfefa5e23676d228a9'
+                  assert not errors, errors
+                  browser.close()
+              (out / 'report.json').write_text(json.dumps({'status':'passed','observations':observations,'pageErrors':errors}, indent=2))
+              print(json.dumps(observations, indent=2))
+          finally:
+              server.terminate()
+              server.wait(timeout=5)
+          PY
+      - name: Commit only the portrait change and remove this temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add speakers.html assets/speakers/chris-jones-20260919.webp
+          git rm .github/workflows/import-chris-jones-portrait-once.yml
+          git diff --cached --stat
+          git commit -m 'Replace Chris Jones portrait with the organizer-supplied photograph'
+          git push origin HEAD:content/chris-jones-portrait-20260919
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chris-jones-portrait-qa
+          path: portrait-qa/
+          retention-days: 3
