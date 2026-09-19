@@ -1,60 +1,87 @@
-name: Import Somerset reservation forms (one-time)
+name: Somerset reservation verification (one-time)
 on:
   push:
     branches: [review/somerset-only-reservations]
     paths: [.github/workflows/import-somerset-forms.yml]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  import:
+  verify:
     if: github.actor == 'mtap-research'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          ref: review/somerset-only-reservations
-      - name: Download and verify the exact organizer attachment
-        env:
-          SOURCE_URL: 'https://sdmntprjapaneast.oaiusercontent.com/files/00000000-55e0-8209-8168-33df03e81c9e/raw?se=2026-09-19T16%3A51%3A17Z&sp=r&sv=2026-02-06&sr=b&scid=a2a880cd-dc18-502f-aab7-7649a98be869&skoid=fe2e0858-51c5-47e9-acb7-46ebb9a0f396&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-19T01%3A06%3A48Z&ske=2026-09-20T01%3A06%3A48Z&sks=b&skv=2026-02-06&sig=HSvYFpWSwHjr7KgG7fY7UVCcYeB7IxFnoCVLDeKfzss%3D'
+          node-version: '22'
+      - name: Existing site checks
         run: |
+          python3 scripts/check_site.py
+          node scripts/test_footer_date.mjs
+          node scripts/test_exchange_rate.mjs
+          node scripts/test_sheets_sync.mjs
+      - name: Install browser for responsive verification
+        run: |
+          python3 -m pip install playwright==1.55.0
+          python3 -m playwright install --with-deps chromium
+      - name: Verify hotel page and downloadable original files
+        run: |
+          mkdir -p /tmp/somerset-review
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/somerset-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
           python3 - <<'PY'
-          import hashlib, io, os, urllib.request, urllib.error, zipfile
+          import hashlib, json, time, urllib.request
           from pathlib import Path
-          request = urllib.request.Request(os.environ['SOURCE_URL'], headers={'User-Agent': 'Mozilla/5.0'})
-          try:
-              with urllib.request.urlopen(request, timeout=60) as response:
-                  data = response.read(2000000)
-          except urllib.error.HTTPError as error:
-              print('Download response:', error.code, error.read(2000).decode('utf-8', errors='replace'))
-              raise SystemExit(1)
-          assert hashlib.sha256(data).hexdigest() == '66db599634b79cda697df89a855185c000405d7e5401d372c04f932f05179d73', 'Archive hash mismatch'
-          expected = {
-              'pdf': '0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',
-              'docx': 'd2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091',
-          }
-          destination = Path('assets/documents')
-          destination.mkdir(parents=True, exist_ok=True)
-          with zipfile.ZipFile(io.BytesIO(data)) as archive:
-              for ext, digest in expected.items():
-                  source = '[Somerset Palace Seoul] Group Reservation Form_PBAST10_2027.' + ext
-                  body = archive.read(source)
-                  assert hashlib.sha256(body).hexdigest() == digest, ext + ' hash mismatch'
-                  if ext == 'pdf':
-                      assert body.startswith(b'%PDF-'), 'Invalid PDF'
-                  else:
-                      with zipfile.ZipFile(io.BytesIO(body)) as document:
-                          assert 'word/document.xml' in document.namelist(), 'Invalid DOCX'
-                  target = destination / ('PBAST10_Somerset_Palace_Reservation_Form_2027.' + ext)
-                  target.write_bytes(body)
-                  print(str(target), len(body), digest)
+          from playwright.sync_api import sync_playwright
+          for attempt in range(20):
+              try:
+                  urllib.request.urlopen('http://127.0.0.1:8765/accommodation.html', timeout=2).close()
+                  break
+              except OSError:
+                  time.sleep(.25)
+          results = []
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              for width in (390, 768, 1440):
+                  page = browser.new_page(viewport={'width':width, 'height':1000}, device_scale_factor=1)
+                  page.goto('http://127.0.0.1:8765/accommodation.html', wait_until='networkidle')
+                  page.evaluate('document.fonts.ready')
+                  assert page.locator('h1').inner_text() == 'Stay at Somerset Palace Seoul'
+                  assert page.locator('.recommended-hotels').count() == 0
+                  assert page.locator('.hotel-card').count() == 0
+                  assert page.locator('a[href="mailto:christine.park@the-ascott.com"]').count() == 1
+                  assert page.locator('a[href="mailto:enquiry.seoul@the-ascott.com"]').count() == 1
+                  assert page.locator('a[href="tel:+82267308002"]').count() == 1
+                  assert page.locator('a[href="tel:+82267308888"]').count() == 1
+                  assert page.locator('.reservation-downloads a[download]').count() == 2
+                  dimensions = page.evaluate('({width:innerWidth, scroll:document.documentElement.scrollWidth})')
+                  assert dimensions['scroll'] <= dimensions['width']+1, dimensions
+                  assert page.locator('.featured-hotel-photo img').evaluate('(img) => img.complete && img.naturalWidth > 0')
+                  page.screenshot(path=f'/tmp/somerset-review/accommodation-{width}.png', full_page=True)
+                  results.append({'viewport':width, 'overflow':False, 'checks':'passed'})
+                  page.close()
+              page = browser.new_page(accept_downloads=True)
+              page.goto('http://127.0.0.1:8765/accommodation.html', wait_until='networkidle')
+              expected = {
+                  'pdf':'0c2de478ea2a31e27a03a8ff765c88bbb79b1c1cae119b7454d7b777256d04d3',
+                  'docx':'d2fda493f3d9cb8ddc4c6b11c45e0fa1fe4d9833506527a39cfb542986850091',
+              }
+              for extension, digest in expected.items():
+                  with page.expect_download() as download_info:
+                      page.locator(f'.reservation-downloads a[href$=".{extension}"]').click()
+                  download = download_info.value
+                  assert download.suggested_filename == f'PBAST10_Somerset_Palace_Reservation_Form_2027.{extension}'
+                  assert hashlib.sha256(Path(download.path()).read_bytes()).hexdigest() == digest
+                  results.append({'download':extension, 'original_sha256_verified':True})
+              browser.close()
+          Path('/tmp/somerset-review/results.json').write_text(json.dumps(results,indent=2))
+          print(json.dumps(results,indent=2))
           PY
-      - name: Commit only the two original form files to the review branch
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.pdf assets/documents/PBAST10_Somerset_Palace_Reservation_Form_2027.docx
-          if ! git diff --cached --quiet; then
-            git commit -m 'Import original PBAST10 Somerset reservation PDF and DOCX'
-            git push origin HEAD:review/somerset-only-reservations
-          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: somerset-reservation-review
+          path: /tmp/somerset-review/
+          retention-days: 3
