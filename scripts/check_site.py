@@ -170,10 +170,27 @@ for marker in (
 ):
     if marker in accommodation_source:
         errors.append(f"accommodation.html: obsolete reservation content ({marker})")
+# No hotel booking cutoff was agreed. Guard both visible copy and page metadata.
+normalized_accommodation_source = " ".join(accommodation_source.split())
+for marker in ("2027-04-30", "April 30", "30 April", "30 Apr 2027", "Reservation form deadline"):
+    if marker.casefold() in normalized_accommodation_source.casefold():
+        errors.append(f"accommodation.html: unagreed reservation deadline remains ({marker})")
+for marker in (
+    "Special Conference Rates",
+    "Discounted room rates are available on a first-come, first-served basis and subject to room availability.",
+    "The number of rooms allocated at the special rate is limited.",
+    "Early reservation is strongly recommended.",
+    "Important Notes",
+    "All reservations are handled directly by the hotel.",
+    "Cancellation and payment policies are subject to the hotel’s terms stated in the reservation form.",
+    "The conference organizers are not responsible for individual booking changes or cancellations.",
+):
+    if marker not in normalized_accommodation_source:
+        errors.append(f"accommodation.html: missing organizer-provided reservation note ({marker})")
 for marker in (
     'mailto:christine.park@the-ascott.com', 'mailto:enquiry.seoul@the-ascott.com',
     'tel:+82267308002', 'tel:+82267308888',
-    'datetime="2027-04-30"', 'datetime="2027-05-30"', 'datetime="2027-06-04"',
+    'datetime="2027-05-30"', 'datetime="2027-06-04"',
     'css/somerset-reservations.css',
 ):
     if marker not in accommodation_source:
