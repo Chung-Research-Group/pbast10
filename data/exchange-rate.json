@@ -1,13 +1,13 @@
 {
   "baseCurrency": "USD",
   "quoteCurrency": "KRW",
-  "rate": 1355.046917,
-  "effectiveDate": "2026-09-25",
+  "rate": 1357.92758,
+  "effectiveDate": "2026-09-28",
   "source": "European Central Bank",
   "sourceUrl": "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html",
   "sourceRates": {
-    "USD": 1.1403,
-    "KRW": 1545.16
+    "USD": 1.1378,
+    "KRW": 1545.05
   },
   "calculation": "EUR/KRW divided by EUR/USD"
 }
