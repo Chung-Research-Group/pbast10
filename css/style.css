@@ -220,15 +220,21 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .organizer-item p{margin:18px 0 0;font:500 15.5px/1.5 var(--sans);color:var(--body)}
 
 .sponsor-section{padding-top:0;padding-bottom:56px}
-.sponsor-layout{display:grid;grid-template-columns:220px minmax(0,1fr) auto;gap:40px;align-items:center}
+.sponsor-layout{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:center}
 .sponsor-layout .section-title{margin:0}
-.confirmed-sponsors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.confirmed-sponsors{grid-column:1/-1;grid-row:2;display:grid;justify-items:center;gap:36px}
+.sponsor-layout>.btn{grid-column:2;grid-row:1}
+.sponsor-partner-platinum{width:min(100%,560px)}
+.sponsor-partner-gold{width:min(100%,280px)}
 .sponsor-partner{text-align:center;min-width:0}
 .sponsor-tier{margin:0 0 18px;font:600 13px/1.4 var(--sans);letter-spacing:.06em;text-transform:uppercase}
 .sponsor-tier-platinum{color:#596574}
 .sponsor-tier-gold{color:#89651e}
-.sponsor-logo{display:flex;align-items:center;justify-content:center;min-height:80px;padding:12px;background:#fff}
-.sponsor-logo img{display:block;max-width:100%;width:auto;max-height:64px;height:auto}
+.sponsor-logo{display:flex;align-items:center;justify-content:center;padding:24px;background:#fff}
+.sponsor-partner-platinum .sponsor-logo{min-height:132px;padding:32px}
+.sponsor-partner-platinum img{width:100%;height:auto}
+.sponsor-partner-gold .sponsor-logo{min-height:88px}
+.sponsor-logo img{display:block;max-width:100%;height:auto}
 .sponsor-logo:focus-visible{outline:2px solid var(--navy);outline-offset:4px}
 .sponsor-layout p{margin:0;font:400 15.5px/1.65 var(--sans);color:var(--muted)}
 .abstract-cta{padding-top:0;padding-bottom:64px}
@@ -401,7 +407,7 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
 }
 
 @media (max-width:1060px) and (min-width:821px){
-  .sponsor-layout{grid-template-columns:180px minmax(0,1fr) auto;gap:28px}
+  .sponsor-layout{gap:28px}
 }
 
 @media (max-width:1050px) and (min-width:821px){
@@ -463,7 +469,7 @@ ol.steps,ul.list{margin:0;padding-left:20px;font:400 15px/1.75 var(--sans);color
   .organizer-logo{height:58px}
   .organizer-item p{margin-top:13px}
   .sponsor-layout{grid-template-columns:1fr;gap:14px;align-items:start}
-  .sponsor-layout .btn{justify-self:start}
+  .sponsor-layout>.btn{grid-column:1;grid-row:3;justify-self:start}
   .cta-band{flex-direction:column;align-items:flex-start;padding:28px 24px}
   .featured-hotel{grid-template-columns:1fr;gap:26px;padding:24px}
   .featured-hotel-photo{width:100%;height:auto;aspect-ratio:16/10}
