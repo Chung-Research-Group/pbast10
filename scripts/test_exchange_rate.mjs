@@ -54,33 +54,36 @@ assert.equal(stored.locked, true, "Registration fees must not follow market FX")
 assert.deepEqual(stored.confirmedPaymentAmounts.earlyBird, {
   regular: 861000, student: 530000, accompanyingSpouse: 265000
 });
-assert.equal(stored.confirmedPaymentAmounts.standard, null);
-assert.equal(stored.confirmedPaymentAmounts.invitedSpeakers, null);
+assert.deepEqual(stored.calculatedStandardKrw.amounts, {
+  regular: 1060000, student: 596000, accompanyingSpouse: 265000
+});
+// User-directed proportional calculation, checked independently against fixed data.
+const standardKrw = [861000 * 800 / 650, 530000 * 450 / 400, 265000 * 200 / 200]
+  .map(amount => Math.round(amount / 1000) * 1000);
+assert.deepEqual(standardKrw, Object.values(stored.calculatedStandardKrw.amounts));
 
 const registration = await readFile(resolve("registration.html"), "utf8");
-// Even extreme future rates must not change either confirmed or unconfirmed fees.
+// Even extreme future rates must not change fixed registration fees.
 for (const rate of [500, 1324.452783, 3000]) {
   assert.equal(renderRegistrationFallback(registration, { ...stored, rate }), registration);
 }
 const confirmedFees = [...registration.matchAll(/data-fixed-krw="(\d+)">KRW ([\d,]+)/g)];
-assert.deepEqual(confirmedFees.map(([, amount]) => Number(amount)), [861000, 530000, 265000]);
+assert.deepEqual(confirmedFees.map(([, amount]) => Number(amount)), [861000, 1060000, 530000, 596000, 265000, 265000]);
 for (const [, amount, displayed] of confirmedFees) {
   assert.equal(Number(displayed.replaceAll(",", "")), Number(amount));
 }
-// Historical cross-rate is a separate check, never a source for unconfirmed prices.
-assert.deepEqual([650, 400, 200].map(usd => Math.round(usd * stored.rate / 1000) * 1000), [861000, 530000, 265000]);
+// Cross-check every published amount against the independently stored historical rate.
+assert.deepEqual([650, 800, 400, 450, 200, 200].map(usd => Math.round(usd * stored.rate / 1000) * 1000), [861000, 1060000, 530000, 596000, 265000, 265000]);
 assert.doesNotMatch(registration, /data-usd-fee|data-krw-equivalent|<script[^>]+exchange-rate/);
 assert.doesNotMatch(registration, /portal will open soon|final payment amounts may vary|431,000/);
-assert.equal((registration.match(/KRW confirmation pending/g) || []).length, 3);
+assert.doesNotMatch(registration, /confirmation pending|awaiting|invited speakers|Payment access|Fixed KRW fees/i);
 for (const requiredText of [
   'href="https://www.kiche.or.kr/_ScR2/ko"',
   'href="https://www.kiche.or.kr/_ScR2/en"',
   "Through March 31, 2027", "April 1–June 3, 2027",
-  "Invited speakers:</strong> USD 325.",
-  "The KRW fee is awaiting organizer confirmation.",
-  "overseas card-payment completion has not been verified",
-  "All conference sessions, lunches, the Welcome Reception, and the Gala Dinner (Banquet) are included.",
-  "Includes the Welcome Reception, Gala Dinner (Banquet), and conference tour;"
+  "Conference sessions, lunches, Welcome Reception, and Gala Dinner (Banquet).",
+  "Welcome Reception, Gala Dinner (Banquet), and conference tour.",
+  "Available only for the spouse of a registered participant."
 ]) {
   assert.ok(registration.includes(requiredText), `Missing payment information: ${requiredText}`);
 }
