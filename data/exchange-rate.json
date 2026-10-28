@@ -11,7 +11,7 @@
   },
   "calculation": "EUR/KRW divided by EUR/USD",
   "locked": true,
-  "purpose": "Historical reference frozen when KIChE set payment amounts; use confirmedPaymentAmounts for published KRW fees.",
+  "purpose": "Historical reference remains locked; confirmed early-bird KRW and user-directed proportional standard KRW are recorded separately.",
   "confirmedPaymentAmounts": {
     "verifiedDate": "2026-10-28",
     "sourceUrl": "https://www.kiche.or.kr/_ScR2/ko",
@@ -19,8 +19,16 @@
       "regular": 861000,
       "student": 530000,
       "accompanyingSpouse": 265000
+    }
+  },
+  "calculatedStandardKrw": {
+    "amounts": {
+      "regular": 1060000,
+      "student": 596000,
+      "accompanyingSpouse": 265000
     },
-    "standard": null,
-    "invitedSpeakers": null
+    "method": "Early-bird KRW multiplied by standard USD / early-bird USD, rounded to the nearest KRW 1,000.",
+    "authorizationDate": "2026-10-28",
+    "basis": "User-directed proportional calculation; not independently verified against standard-period KIChE checkout."
   }
 }
