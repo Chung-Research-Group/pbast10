@@ -178,6 +178,7 @@ h2.sub{font:700 26px var(--serif);margin:0 0 22px}
 .fee-table tbody tr:last-child th,.fee-table tbody tr:last-child td{border-bottom:0}
 .registration-fees{max-width:none}
 .registration-notes{display:grid;gap:3px;max-width:none}
+.fee-table .fee-period{display:block;margin-top:4px;font:400 12px/1.4 var(--sans)}
 .fee-table .fee-krw{display:block;margin-top:3px;font:500 13px/1.35 var(--sans);color:var(--muted);white-space:nowrap}
 .fee-row{display:grid;grid-template-columns:1.2fr 1fr 1fr;font:400 16px var(--sans);border-bottom:1px solid var(--line2)}
 .fee-row:last-child{border-bottom:0}
