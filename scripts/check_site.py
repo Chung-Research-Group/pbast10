@@ -233,9 +233,9 @@ for path in HTML_FILES:
                 errors.append(f"{path.name}: split venue/accommodation navigation is incomplete ({marker})")
 
 registration_source = (ROOT / "registration.html").read_text(encoding="utf-8")
-for marker in ("data-usd-fee", "data-krw-equivalent", "data-exchange-rate", "js/exchange-rate.js"):
+for marker in ("data-fixed-krw", "https://www.kiche.or.kr/_ScR2/ko", "https://www.kiche.or.kr/_ScR2/en"):
     if marker not in registration_source:
-        errors.append(f"registration.html: missing exchange-rate integration ({marker})")
+        errors.append(f"registration.html: missing fixed payment information ({marker})")
 
 exchange_rate_path = ROOT / "data" / "exchange-rate.json"
 if not exchange_rate_path.exists():
@@ -258,6 +258,8 @@ else:
             errors.append("data/exchange-rate.json: expected USD/KRW currencies")
         elif exchange_rate["source"] != "European Central Bank":
             errors.append("data/exchange-rate.json: unexpected exchange-rate source")
+        elif exchange_rate.get("locked") is not True:
+            errors.append("data/exchange-rate.json: registration fee lock must stay enabled")
         else:
             usd = exchange_rate["sourceRates"]["USD"]
             krw = exchange_rate["sourceRates"]["KRW"]

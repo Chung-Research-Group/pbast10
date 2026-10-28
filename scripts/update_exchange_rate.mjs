@@ -70,6 +70,8 @@ export async function fetchExchangeRate(fetchImpl = fetch, now = new Date()) {
 }
 
 export function renderRegistrationFallback(source, data) {
+  // A market-rate update must never overwrite confirmed payment amounts.
+  if (data.locked === true) return source;
   let feeCount = 0;
   let rendered = source.replace(
     /(<td data-usd-fee="(\d+)"[^>]*>USD \d+<span class="fee-krw" data-krw-equivalent>)[^<]+(<\/span>)/g,
@@ -105,6 +107,11 @@ async function main() {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const outputPath = resolve(root, "data/exchange-rate.json");
   const registrationPath = resolve(root, "registration.html");
+  const stored = JSON.parse(await readFile(outputPath, "utf8"));
+  if (stored.locked === true) {
+    console.log("Registration payment amounts are fixed; exchange-rate updates are disabled.");
+    return;
+  }
   const data = await fetchExchangeRate();
   const registration = renderRegistrationFallback(await readFile(registrationPath, "utf8"), data);
   await mkdir(dirname(outputPath), { recursive: true });

@@ -12,7 +12,7 @@ Live at https://pbast10.org
 index.html               Home (hero, welcome, dates, topics, call for abstracts, sponsors)
 speakers.html            Speakers & Committee (Plenary / Keynote / Invited / Committee tabs)
 registration.html        Fees & key dates
-data/exchange-rate.json  Latest ECB-derived USD/KRW reference rate
+data/exchange-rate.json  Locked historical rate and verified KIChE KRW fees
 abstract-submission.html Netlify abstract form with required file upload
 revise-abstract.html     Private token-based abstract review/revision form
 thank-you.html           Successful form-submission destination
@@ -24,13 +24,13 @@ sponsorship.html         Sponsorship tiers
 css/style.css            All styles (design tokens in :root)
 js/tabs.js               Tab switcher for speakers page
 js/mobile-nav.js         Accessible mobile navigation
-js/exchange-rate.js      KRW fee conversion from the daily reference-rate data
+js/exchange-rate.js      No-op retained for old cached registration pages
 js/revision-form.js      Secure revision lookup, prefill, and file validation
 netlify/functions/       Verified form submission -> Google Sheets sync
 google-apps-script/      Google Sheets web-app receiver and setup guide
 scripts/check_site.py    Static link, metadata, image, and structure checks
 scripts/update_footer_date.mjs  Build-time KST footer-date stamp
-scripts/update_exchange_rate.mjs  Daily ECB rate fetch and validation
+scripts/update_exchange_rate.mjs  Legacy updater; exits without network access while locked
 netlify.toml              Netlify build command and publish directory
 robots.txt / sitemap.xml Search-engine discovery files
 _headers                  Netlify security and cache headers
@@ -50,7 +50,10 @@ Other static hosts should run `node scripts/update_footer_date.mjs` before publi
 - **Abstract form** — fields and the PDF-only upload restriction are in `abstract-submission.html`. Netlify's total form request limit is 8 MB, so the client-side file limit is 7.5 MB. The Netlify event handler and Apps Script receiver also validate the uploaded file metadata.
 - **Contact email** — in the footer of every page and on `sponsorship.html`.
 - **Footer date** — keep the `data-site-updated` marker in each public footer. Netlify replaces its fallback date with the deployed commit date in `Asia/Seoul` on every build.
-- **Exchange rate** — `.github/workflows/exchange-rate.yml` checks the official ECB reference rates daily at 16:30 UTC (01:30 KST). When a new working-day rate is published, it creates a dated automation branch and pull request, then merges it through the repository's protected-branch path. The GitHub organization must allow Actions to create and approve pull requests; the workflow's explicit `actions: write` permission is limited to dispatching and monitoring the required site checks. A retry recreates a missing pull request if an earlier run stopped after pushing its dated branch. It updates both `data/exchange-rate.json` and the registration-page fallback. USD/KRW is calculated as EUR/KRW divided by EUR/USD; registration estimates are rounded to the nearest KRW 1,000.
+- **Registration payments** — `registration.html` links to KIChE's Korean (KRW) and English (USD) payment pages. Early-bird payments close March 31, 2027; standard/on-site payments run April 1–June 3, 2027. Confirmed early-bird KRW fees, checked directly against the payment page on October 28, 2026, are regular **861,000**, student **530,000**, and accompanying spouse **265,000**. Spouse registration is an optional add-on. Standard-period KRW amounts were not exposed by the current early-bird payment page and remain unpublished pending KIChE confirmation. Invited-speaker USD 325 is confirmed; KIChE's provisional KRW 431,000 awaits organizer confirmation and must not be published as confirmed.
+- **Exchange-rate lock** — The last rate in effect when KIChE set its amounts was ECB October 23, 2026: 1 USD = 1,324.452783 KRW. It independently reproduces all three verified early-bird fees after rounding to KRW 1,000. This is historical provenance, not an instruction to derive unconfirmed fees. `data/exchange-rate.json` has `locked: true`; the legacy updater exits before fetching or writing, and the old browser script is a no-op. The former daily workflow is now a read-only, manual verification workflow. Do not restore live conversions or compute an invited-speaker KRW fee. Publish additional KRW amounts only after confirmation from KIChE/the organizers, updating the recorded source and checks.
+- **Payment availability** — Both KIChE pages rendered during the October 28, 2026 check. This verifies page access only; no registration was submitted and no card payment was attempted. Do not describe overseas card processing as restored without confirmation.
+- **Runtime** — Public pages are static HTML/CSS/JS hosted on Netlify. Abstract services use Node.js Netlify Functions and Google Apps Script. This repository has no PHP files or PHP runtime configuration. KIChE payment processing is external; its PHP incident does not establish a PHP vulnerability on this site.
 - **Pre-commit checks** — run `python scripts/check_site.py` and `node scripts/test_footer_date.mjs`.
 
 ## Netlify

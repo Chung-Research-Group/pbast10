@@ -1,103 +1,18 @@
-name: Update USD-KRW reference rate
+name: Verify fixed registration fees
 
+# Fees are fixed by KIChE. Do not schedule FX fetches or automated fee changes.
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/exchange-rate.yml"
-      - "scripts/update_exchange_rate.mjs"
-  schedule:
-    # ECB publishes each working day's reference rates by about 16:00 CET/CEST.
-    # 16:30 UTC is 01:30 the following day in Korea and is safely after publication.
-    - cron: "30 16 * * *"
   workflow_dispatch:
 
 permissions:
-  actions: write
-  contents: write
-  pull-requests: write
-
-concurrency:
-  group: exchange-rate-update
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  update:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-      - name: Fetch and validate ECB rates
-        run: node scripts/update_exchange_rate.mjs
-      - name: Run exchange-rate tests
+      - name: Verify fixed payment amounts
         run: node scripts/test_exchange_rate.mjs
-      - name: Validate updated site
+      - name: Validate site
         run: python scripts/check_site.py
-      - name: Publish a newly released rate through a pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- data/exchange-rate.json registration.html; then
-            echo "The stored ECB reference rate is already current."
-            exit 0
-          fi
-
-          effective_date=$(node -p "JSON.parse(require('fs').readFileSync('data/exchange-rate.json', 'utf8')).effectiveDate")
-          branch="automation/exchange-rate-${effective_date}"
-          pr_title="Update USD-KRW reference rate for ${effective_date}"
-          pr_body="Automated update from the European Central Bank daily reference rates. The exchange-rate calculation, registration fallback values, and static site checks passed before this PR was created."
-
-          create_pr() {
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "$pr_title" \
-              --body "$pr_body"
-          }
-
-          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            echo "Resuming the existing update branch for ECB ${effective_date}."
-            pr_url=$(gh pr list --state open --head "$branch" --json url --jq '.[0].url')
-            if [[ -z "$pr_url" ]]; then
-              echo "The update branch has no open pull request; creating the missing PR."
-              pr_url=$(create_pr)
-            fi
-            git fetch origin "$branch"
-            head_sha=$(git rev-parse "origin/$branch")
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git switch -c "$branch"
-            git add data/exchange-rate.json registration.html
-            git commit -m "Update USD-KRW reference rate for ${effective_date}"
-            git push --set-upstream origin "$branch"
-            head_sha=$(git rev-parse HEAD)
-
-            pr_url=$(create_pr)
-          fi
-
-          gh workflow run site-checks.yml --ref "$branch"
-          run_id=""
-          for _ in {1..15}; do
-            run_id=$(gh run list \
-              --workflow site-checks.yml \
-              --branch "$branch" \
-              --event workflow_dispatch \
-              --json databaseId,headSha \
-              --jq ".[] | select(.headSha == \"${head_sha}\") | .databaseId" \
-              | head -n 1)
-            [[ -n "$run_id" ]] && break
-            sleep 2
-          done
-          if [[ -z "$run_id" ]]; then
-            echo "The explicitly dispatched Site checks run was not found." >&2
-            exit 1
-          fi
-
-          gh run watch "$run_id" --exit-status
-          gh pr merge "$pr_url" --squash --delete-branch
