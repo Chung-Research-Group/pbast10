@@ -1,5 +1,28 @@
 # Asset sources
 
+## Confirmed Gold Sponsors — 31 October 2026
+
+The organiser explicitly requested publication of 한창산업(주) and (주)엘림글로벌
+as Gold Sponsors in the homepage Sponsors section on 31 October 2026. Existing
+BSD Instrument (Platinum) and SCINCO (Gold) recognition is retained.
+
+- `assets/sponsors/hanchang.png`: unchanged original PNG (2944 × 711) from
+  Hanchang Industry's official [CI page](https://www.hanchem.com/about/ci.php),
+  [CI download](https://www.hanchem.com/downloads/logo.png).
+  SHA-256: `026a78a9572f90dae46bef44776e0b7e379207a7bb9cd9e493a0e22729c88b80`.
+- `assets/sponsors/elim-global.png`: unchanged original PNG (96 × 60) from
+  [Elim Global](https://www.elim-global.com/)'s official
+  [standard logo asset](https://www.elim-global.com/include/header/force/img/top_logo.png).
+  The standard mark is used instead of the homepage's 20th-anniversary variant.
+  SHA-256: `729f944f98196a66b9573159407245fbd675d08c29ff92e905f8624a61f36d12`.
+
+Retrieved 31 October 2026. Logos are hosted locally, retain their original
+proportions and colours, and link to each sponsor's official website. Company
+trademarks remain the property of their respective owners; the organiser's
+publication request is not an open-content licence.
+
+## Other assets
+
 - `assets/hero-background.jpg`: existing repository asset used for the home hero and venue image. Confirm internal permission/ownership before public reuse outside PBAST10.
 - `assets/logo/*`: existing PBAST10 conference logo assets.
 - `assets/speakers/*` and `assets/committee/*`: existing repository portraits. Confirm each speaker's approval and photographer/source record before publication.
