@@ -140,6 +140,31 @@ if any(position < 0 for position in home_positions):
 elif home_positions != sorted(home_positions):
     errors.append("index.html: expected section order Call for Abstracts -> Sponsors -> Organized by")
 
+gold_group = re.search(
+    r'<div class="sponsor-partner sponsor-partner-gold">(.*?)</div>',
+    home_source,
+    re.DOTALL,
+)
+if not gold_group:
+    errors.append("index.html: missing Gold Sponsors group")
+else:
+    gold_parser = PageParser()
+    gold_parser.feed(gold_group.group(1))
+    expected_gold = [
+        ("assets/sponsors/scinco.png", "https://www.scinco.com/"),
+        ("assets/sponsors/hanchang.png", "https://www.hanchem.com/"),
+        ("assets/sponsors/elim-global.png", "https://www.elim-global.com/"),
+    ]
+    if [image.get("src") for image in gold_parser.images] != [src for src, _ in expected_gold]:
+        errors.append("index.html: Gold Sponsors must include SCINCO, Hanchang and Elim Global exactly once")
+    if gold_parser.links != [href for _, href in expected_gold]:
+        errors.append("index.html: Gold Sponsor logos must link to their official company websites")
+    for marker in ("Gold Sponsors", "한창산업(주)", "(주)엘림글로벌"):
+        if marker not in gold_group.group(1):
+            errors.append(f"index.html: missing Gold Sponsor label ({marker})")
+if 'assets/sponsors/bsd-instrument.png' not in home_source:
+    errors.append("index.html: existing BSD Instrument Platinum Sponsor must be retained")
+
 venue_source = (ROOT / "venue.html").read_text(encoding="utf-8")
 english_map_src = (
     'src="https://maps.google.com/maps?'
