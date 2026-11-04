@@ -1,5 +1,24 @@
 # Asset sources
 
+## Confirmed Platinum Sponsor — 4 November 2026
+
+The organiser explicitly requested publication of 안톤파 코리아 (Anton Paar
+Korea) as an additional Platinum Sponsor in the homepage Sponsors section.
+Existing BSD Instrument (Platinum) and all Gold Sponsors are retained.
+
+- `assets/sponsors/anton-paar.png`: unchanged original transparent PNG
+  (2528 × 739) from the official [Anton Paar Group press page](https://anton-paar.group/presse/),
+  listed as "Logo Digital White":
+  [logo download](https://anton-paar.group/wp-content/uploads/2025/08/Anton-Paar-Logo_pos_rgb.png).
+  SHA-256: `47b8ef42440fb4d3bb073dff3c34ef3c920a1b1552be1ba7c48366a5f1806f86`.
+- The sponsor card links to the [official Korea website](https://www.anton-paar.com/kr-kr/).
+  Company identity is confirmed by the official
+  [Anton Paar Korea Ltd. page](https://www.anton-paar.com/corp-en/about-us/anton-paar-companies/anton-paar-korea-ltd/).
+
+Retrieved 4 November 2026. The logo is hosted locally and displayed proportionally
+with its original colours. The trademark remains the property of Anton Paar;
+the organiser's publication request is not an open-content licence.
+
 ## Confirmed Gold Sponsors — 31 October 2026
 
 The organiser explicitly requested publication of 한창산업(주) and (주)엘림글로벌
