@@ -1,0 +1,14 @@
+/* Participating journal identity and official website link. */
+.participating-journals{padding:30px 34px}
+.journal-entry{display:flex;flex-wrap:wrap;align-items:center;gap:24px;margin:20px 0 24px}
+.journal-cover{display:block;flex:0 0 120px;background:#fff}
+.journal-cover img{display:block;width:100%;height:auto}
+.journal-details{flex:1 1 240px;min-width:0}
+.journal-details h2{font:700 28px/1.35 var(--serif);margin:0 0 18px}
+
+@media (max-width:600px){
+  .participating-journals{padding:26px 24px}
+  .journal-entry{gap:20px}
+  .journal-cover{flex-basis:100px}
+  .journal-details h2{font-size:24px}
+}

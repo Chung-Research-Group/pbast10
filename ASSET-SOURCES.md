@@ -1,5 +1,24 @@
 # Asset sources
 
+## Participating journal — 21 November 2026
+
+The organiser requested the official website link and a journal identity image
+for Adsorption Science & Technology in the Special Issue page.
+
+- `assets/journals/adsorption-science-technology.jpg`: unchanged official Sage
+  journal cover (560 × 797 JPEG) from the
+  [Sage journal information page](https://services.sagepub.com/journal/adsorption-science-technology/),
+  [original image](https://services.sagepub.com/wp-content/uploads/2026/04/ADT.jpg).
+  SHA-256: `162d3cff9164e1031415331fd75e5bf03f9fe530e6d98483859b771026f34cd4`.
+- The cover and website button link to the
+  [official journal homepage](https://journals.sagepub.com/home/adt).
+
+Retrieved 21 November 2026. This is a publisher-supplied cover image, not a
+standalone logo or a PBAST10 special-issue cover. Its original 2024 placeholder
+volume text is retained. The image is hosted locally, displayed proportionally,
+and identified as a journal cover in its alternative text. Copyright and
+trademarks remain with their respective owners.
+
 ## Confirmed Platinum Sponsor — 4 November 2026
 
 The organiser explicitly requested publication of 안톤파 코리아 (Anton Paar
